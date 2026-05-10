@@ -133,7 +133,9 @@ export default function App() {
       if (user) {
         const snap = await getDoc(doc(db, "utilisateurs", user.uid));
         if (snap.exists()) {
-          setUtilisateur({ uid: user.uid, ...snap.data() });
+          const userData = { uid: user.uid, ...snap.data() };
+          setUtilisateur(userData);
+          setMode(userData.role === "menage" ? "menage" : "disponibles");
           setEcran("app");
         }
       }
@@ -185,10 +187,13 @@ export default function App() {
 
         {ecran === "app" && (
           <div style={{ display: "flex", background: "rgba(0,0,0,0.2)", borderRadius: "12px 12px 0 0", padding: 4, gap: 4 }}>
-            {[
-              { key: "menage", label: "🏠 Ménage", desc: "Signaler" },
-              { key: "collecteur", label: "🚛 Collecteur", desc: "Collecter" },
-            ].map(tab => (
+            {(utilisateur?.role === "menage" ? [
+              { key: "menage", label: "🏠 Signaler", desc: "Nouveau" },
+              { key: "mescollectes", label: "📋 Mes signalements", desc: "Historique" },
+            ] : [
+              { key: "disponibles", label: "📦 Disponibles", desc: "Collecter" },
+              { key: "mescollectes", label: "🚛 Mes collectes", desc: "Historique" },
+            ]).map(tab => (
               <button key={tab.key} onClick={() => setMode(tab.key)} style={{
                 flex: 1, padding: "10px 16px", borderRadius: "10px 10px 0 0",
                 border: "none", cursor: "pointer",
@@ -237,7 +242,11 @@ export default function App() {
   if (ecran === "inscription") return (
     <div style={{ minHeight: "100vh", background: "#f5fdf5", fontFamily: "sans-serif" }}>
       <Header />
-      <Inscription onInscrit={(user) => { setUtilisateur(user); setEcran("app"); }} />
+      <Inscription onInscrit={(user) => {
+        setUtilisateur(user);
+        setMode(user.role === "menage" ? "menage" : "disponibles");
+        setEcran("app");
+      }} />
       <div style={{ textAlign: "center", padding: 16 }}>
         <span style={{ fontSize: 13, color: "#6b9e5a" }}>Déjà un compte ? </span>
         <button onClick={() => setEcran("connexion")} style={{ fontSize: 13, color: "#2e7d32", fontWeight: 700, background: "none", border: "none", cursor: "pointer" }}>
@@ -250,7 +259,11 @@ export default function App() {
   if (ecran === "connexion") return (
     <div style={{ minHeight: "100vh", background: "#f5fdf5", fontFamily: "sans-serif" }}>
       <Header />
-      <Connexion onConnecte={(user) => { setUtilisateur(user); setEcran("app"); }} />
+      <Connexion onConnecte={(user) => {
+        setUtilisateur(user);
+        setMode(user.role === "menage" ? "menage" : "disponibles");
+        setEcran("app");
+      }} />
       <div style={{ textAlign: "center", padding: 16 }}>
         <span style={{ fontSize: 13, color: "#6b9e5a" }}>Pas encore de compte ? </span>
         <button onClick={() => setEcran("inscription")} style={{ fontSize: 13, color: "#2e7d32", fontWeight: 700, background: "none", border: "none", cursor: "pointer" }}>
@@ -264,7 +277,11 @@ export default function App() {
     <div style={{ minHeight: "100vh", background: "#f5fdf5", fontFamily: "sans-serif" }}>
       <Header />
       <div style={{ maxWidth: 440, margin: "0 auto", paddingBottom: 40 }}>
-        {mode === "menage" ? <Menage utilisateur={utilisateur} /> : <Collecteur utilisateur={utilisateur} />}
+        {utilisateur?.role === "menage" ? (
+          <Menage utilisateur={utilisateur} mode={mode} />
+        ) : (
+          <Collecteur utilisateur={utilisateur} mode={mode} />
+        )}
       </div>
     </div>
   );
