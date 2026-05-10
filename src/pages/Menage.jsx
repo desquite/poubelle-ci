@@ -106,7 +106,7 @@ export default function Menage({ utilisateur }) {
         createdAt: serverTimestamp(),
       });
 
-      await fetch("/.netlify/functions/notifier", {
+      await fetch("/api/notifier", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ signalement: form })
