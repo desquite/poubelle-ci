@@ -1,0 +1,23 @@
+<!-- Ce fichier est la page principale qui charge l'app et active la PWA -->
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#2e7d32" />
+    <meta name="description" content="Signalement de collecte de déchets en Côte d'Ivoire" />
+    <link rel="manifest" href="/manifest.json" />
+    <title>Poubelle-CI</title>
+    <script>
+      if ("serviceWorker" in navigator) {
+        window.addEventListener("load", () => {
+          navigator.serviceWorker.register("/sw.js");
+        });
+      }
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
