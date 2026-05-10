@@ -9,6 +9,18 @@ import Collecteur from "./pages/Collecteur";
 import Inscription from "./pages/Inscription";
 import Connexion from "./pages/Connexion";
 
+
+
+const timeAgo = (timestamp) => {
+  if (!timestamp?.seconds) return "";
+  const now = Date.now();
+  const diff = Math.floor((now - timestamp.seconds * 1000) / 1000);
+  if (diff < 60) return "Il y a quelques secondes";
+  if (diff < 3600) return `Il y a ${Math.floor(diff / 60)} min`;
+  if (diff < 86400) return `Il y a ${Math.floor(diff / 3600)} h`;
+  return `Il y a ${Math.floor(diff / 86400)} j`;
+};
+
 const auth = getAuth();
 
 function SignalementsPublics() {
@@ -101,6 +113,7 @@ function SignalementsPublics() {
               <div style={{ fontWeight: 700, fontSize: 13, color: "#1a2e1a" }}>{s.nom}</div>
               <div style={{ fontSize: 11, color: "#6b9e5a" }}>📍 {s.commune} — {s.quartier}</div>
               <div style={{ fontSize: 11, color: "#4a6b3a" }}>🗑️ {s.type} · {s.volume}</div>
+              <div style={{ fontSize: 10, color: "#94a3b8" }}>🕐 {timeAgo(s.createdAt)}</div>
             </div>
           </div>
         </div>

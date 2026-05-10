@@ -1,7 +1,7 @@
-// Ce fichier gère la vue ménage avec commune, quartier, GPS et photo
+// Ce fichier gère la vue ménage avec commune, quartier, GPS, photo, suppression et horodatage
 
 import { useState, useEffect } from "react";
-import { collection, addDoc, serverTimestamp, query, where, onSnapshot } from "firebase/firestore";
+import { collection, addDoc, serverTimestamp, query, where, onSnapshot, deleteDoc, doc } from "firebase/firestore";
 import { db } from "../firebase/config";
 import { COMMUNES_QUARTIERS, COMMUNES } from "../quartiers";
 
@@ -12,6 +12,17 @@ const STATUS_COLORS = {
   "disponible": { bg: "#dcfce7", text: "#15803d", dot: "#22c55e" },
   "en cours":   { bg: "#fef9c3", text: "#92400e", dot: "#f59e0b" },
   "collecté":   { bg: "#f1f5f9", text: "#64748b", dot: "#94a3b8" },
+};
+
+// Horodatage relatif
+const timeAgo = (timestamp) => {
+  if (!timestamp?.seconds) return "";
+  const now = Date.now();
+  const diff = Math.floor((now - timestamp.seconds * 1000) / 1000);
+  if (diff < 60) return "Il y a quelques secondes";
+  if (diff < 3600) return `Il y a ${Math.floor(diff / 60)} min`;
+  if (diff < 86400) return `Il y a ${Math.floor(diff / 3600)} h`;
+  return `Il y a ${Math.floor(diff / 86400)} j`;
 };
 
 const uploadImage = async (file) => {
@@ -26,7 +37,7 @@ const uploadImage = async (file) => {
   return data.secure_url;
 };
 
-export default function Menage({ utilisateur }) {
+export default function Menage({ utilisateur, mode }) {
   const [step, setStep] = useState(0);
   const [form, setForm] = useState({
     nom: utilisateur?.nom || "",
@@ -128,8 +139,20 @@ export default function Menage({ utilisateur }) {
     setLoading(false);
   };
 
-  return (
+  const supprimerSignalement = async (id, status) => {
+    if (status === "en cours") {
+      alert("Impossible de supprimer un signalement en cours de collecte.");
+      return;
+    }
+    if (window.confirm("Voulez-vous vraiment supprimer ce signalement ?")) {
+      await deleteDoc(doc(db, "signalements", id));
+    }
+  };
+
+  // Vue Mes signalements
+  if (mode === "mescollectes") return (
     <div style={{ padding: 20, maxWidth: 440, margin: "0 auto" }}>
+      <h3 style={{ fontSize: 14, fontWeight: 800, color: "#1a2e1a", margin: "0 0 16px" }}>📋 Mes signalements</h3>
 
       {/* Stats */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 20 }}>
@@ -145,6 +168,70 @@ export default function Menage({ utilisateur }) {
           </div>
         ))}
       </div>
+
+      {mesSignalements.length === 0 && (
+        <div style={{ textAlign: "center", padding: 30, color: "#6b9e5a", fontSize: 13 }}>
+          Aucun signalement pour le moment
+        </div>
+      )}
+
+      {mesSignalements.map(s => {
+        const sc = STATUS_COLORS[s.status] || STATUS_COLORS["disponible"];
+        return (
+          <div key={s.id} style={{ background: "white", borderRadius: 12, border: "1px solid #e2f0e2", marginBottom: 10, overflow: "hidden" }}>
+            <div style={{ display: "flex" }}>
+              <div style={{ width: 110, minHeight: 100, flexShrink: 0, background: "#f0faf0", position: "relative", overflow: "hidden" }}>
+                {s.photo ? (
+                  <img src={s.photo} alt="poubelle"
+                    style={{ width: "100%", height: "100%", objectFit: "cover", position: "absolute", inset: 0 }} />
+                ) : (
+                  <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 4 }}>
+                    <span style={{ fontSize: 28 }}>🗑️</span>
+                    <span style={{ fontSize: 10, color: "#6b9e5a" }}>Pas de photo</span>
+                  </div>
+                )}
+              </div>
+              <div style={{ flex: 1, padding: "10px 12px", display: "flex", flexDirection: "column", gap: 4 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                  <div style={{ fontWeight: 700, fontSize: 13, color: "#1a2e1a" }}>{s.type}</div>
+                  <div style={{ background: sc.bg, color: sc.text, padding: "2px 8px", borderRadius: 20, fontSize: 10, fontWeight: 700 }}>
+                    {s.status}
+                  </div>
+                </div>
+                <div style={{ fontSize: 11, color: "#6b9e5a" }}>📍 {s.commune} — {s.quartier}</div>
+                <div style={{ fontSize: 11, color: "#6b9e5a" }}>🗑️ {s.volume}</div>
+                <div style={{ fontSize: 10, color: "#94a3b8" }}>🕐 {timeAgo(s.createdAt)}</div>
+                {s.lat && (
+                  <a href={`https://www.google.com/maps?q=${s.lat},${s.lng}`} target="_blank" rel="noreferrer"
+                    style={{ fontSize: 11, color: "#4caf50", textDecoration: "none" }}>
+                    🗺️ Voir sur la carte
+                  </a>
+                )}
+                {s.urgent && <span style={{ fontSize: 10, color: "#ef4444", fontWeight: 700 }}>🔴 URGENT</span>}
+              </div>
+            </div>
+
+            {/* Bouton supprimer */}
+            {s.status !== "en cours" && (
+              <div style={{ borderTop: "1px solid #f0f0f0", padding: "8px 12px" }}>
+                <button onClick={() => supprimerSignalement(s.id, s.status)} style={{
+                  width: "100%", padding: "8px", background: "#fff5f5", color: "#ef4444",
+                  border: "1px solid #fee2e2", borderRadius: 8, fontWeight: 700,
+                  cursor: "pointer", fontSize: 12
+                }}>
+                  🗑️ Supprimer ce signalement
+                </button>
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+
+  // Vue Signaler
+  return (
+    <div style={{ padding: 20, maxWidth: 440, margin: "0 auto" }}>
 
       {/* Bouton signaler */}
       {step === 0 && (
@@ -273,54 +360,6 @@ export default function Menage({ utilisateur }) {
           </button>
         </div>
       )}
-
-      {/* Historique */}
-      <h3 style={{ fontSize: 14, fontWeight: 800, color: "#1a2e1a", margin: "20px 0 10px" }}>📋 Mes signalements</h3>
-
-      {mesSignalements.length === 0 && (
-        <div style={{ textAlign: "center", padding: 30, color: "#6b9e5a", fontSize: 13 }}>
-          Aucun signalement pour le moment
-        </div>
-      )}
-
-      {mesSignalements.map(s => {
-        const sc = STATUS_COLORS[s.status] || STATUS_COLORS["disponible"];
-        return (
-          <div key={s.id} style={{ background: "white", borderRadius: 12, border: "1px solid #e2f0e2", marginBottom: 10, overflow: "hidden" }}>
-            <div style={{ display: "flex" }}>
-              {/* Image à gauche */}
-              <div style={{ width: 110, minHeight: 100, flexShrink: 0, background: "#f0faf0", position: "relative", overflow: "hidden" }}>
-                {s.photo ? (
-                  <img src={s.photo} alt="poubelle"
-                    style={{ width: "100%", height: "100%", objectFit: "cover", position: "absolute", inset: 0 }} />
-                ) : (
-                  <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 4 }}>
-                    <span style={{ fontSize: 28 }}>🗑️</span>
-                    <span style={{ fontSize: 10, color: "#6b9e5a" }}>Pas de photo</span>
-                  </div>
-                )}
-              </div>
-
-              {/* Infos à droite */}
-              <div style={{ flex: 1, padding: "10px 12px", display: "flex", flexDirection: "column", gap: 4 }}>
-                <div style={{ fontWeight: 700, fontSize: 13, color: "#1a2e1a" }}>{s.type}</div>
-                <div style={{ fontSize: 11, color: "#6b9e5a" }}>📍 {s.commune} — {s.quartier}</div>
-                <div style={{ fontSize: 11, color: "#6b9e5a" }}>🗑️ {s.volume}</div>
-                {s.lat && (
-                  <a href={`https://www.google.com/maps?q=${s.lat},${s.lng}`} target="_blank" rel="noreferrer"
-                    style={{ fontSize: 11, color: "#4caf50", textDecoration: "none" }}>
-                    🗺️ Voir sur la carte
-                  </a>
-                )}
-                {s.urgent && <span style={{ fontSize: 10, color: "#ef4444", fontWeight: 700 }}>🔴 URGENT</span>}
-                <div style={{ background: sc.bg, color: sc.text, padding: "2px 10px", borderRadius: 20, fontSize: 11, fontWeight: 700, alignSelf: "flex-start", marginTop: 4 }}>
-                  {s.status}
-                </div>
-              </div>
-            </div>
-          </div>
-        );
-      })}
     </div>
   );
 }

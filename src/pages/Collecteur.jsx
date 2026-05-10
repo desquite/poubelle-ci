@@ -4,16 +4,26 @@ import { useState, useEffect } from "react";
 import { collection, onSnapshot, doc, updateDoc, query, where } from "firebase/firestore";
 import { db } from "../firebase/config";
 
+
+const timeAgo = (timestamp) => {
+  if (!timestamp?.seconds) return "";
+  const now = Date.now();
+  const diff = Math.floor((now - timestamp.seconds * 1000) / 1000);
+  if (diff < 60) return "Il y a quelques secondes";
+  if (diff < 3600) return `Il y a ${Math.floor(diff / 60)} min`;
+  if (diff < 86400) return `Il y a ${Math.floor(diff / 3600)} h`;
+  return `Il y a ${Math.floor(diff / 86400)} j`;
+};
+
 const STATUS_COLORS = {
   "disponible": { bg: "#dcfce7", text: "#15803d" },
   "en cours":   { bg: "#fef9c3", text: "#92400e" },
   "collecté":   { bg: "#f1f5f9", text: "#64748b" },
 };
 
-export default function Collecteur({ utilisateur }) {
+export default function Collecteur({ utilisateur, mode }) {
   const [disponibles, setDisponibles] = useState([]);
   const [mesCollectes, setMesCollectes] = useState([]);
-  const [onglet, setOnglet] = useState("disponibles");
   const [loading, setLoading] = useState(true);
   const [filtreCommune, setFiltreCommune] = useState("");
   const [filtreUrgent, setFiltreUrgent] = useState(false);
@@ -63,7 +73,6 @@ export default function Collecteur({ utilisateur }) {
     return (
       <div style={{ background: "white", borderRadius: 14, border: `1px solid ${s.urgent ? "#fee2e2" : "#e2f0e2"}`, marginBottom: 12, overflow: "hidden" }}>
         <div style={{ display: "flex" }}>
-          {/* Image à gauche */}
           <div style={{ width: 110, minHeight: 110, flexShrink: 0, background: "#f0faf0", position: "relative", overflow: "hidden" }}>
             {s.photo ? (
               <img src={s.photo} alt="poubelle"
@@ -76,7 +85,6 @@ export default function Collecteur({ utilisateur }) {
             )}
           </div>
 
-          {/* Infos à droite */}
           <div style={{ flex: 1, padding: "10px 12px", display: "flex", flexDirection: "column", gap: 4 }}>
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
               {s.urgent && <span style={{ background: "#fee2e2", color: "#ef4444", fontSize: 10, fontWeight: 800, padding: "2px 8px", borderRadius: 10 }}>🔴 URGENT</span>}
@@ -92,10 +100,10 @@ export default function Collecteur({ utilisateur }) {
               </a>
             )}
             {s.notes && <div style={{ fontSize: 11, color: "#94a3b8" }}>💬 {s.notes}</div>}
+            <div style={{ fontSize: 10, color: "#94a3b8" }}>🕐 {timeAgo(s.createdAt)}</div>
           </div>
         </div>
 
-        {/* Bouton action */}
         <div style={{ borderTop: "1px solid #e2f0e2", padding: "10px 12px" }}>
           {actions}
         </div>
@@ -123,25 +131,8 @@ export default function Collecteur({ utilisateur }) {
         ))}
       </div>
 
-      {/* Onglets */}
-      <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
-        {[
-          { key: "disponibles", label: "📦 Disponibles" },
-          { key: "mescollectes", label: "🚛 Mes collectes" },
-        ].map(t => (
-          <button key={t.key} onClick={() => setOnglet(t.key)} style={{
-            flex: 1, padding: "10px", borderRadius: 10, border: "none", cursor: "pointer",
-            background: onglet === t.key ? "#2e7d32" : "#e8f5e3",
-            color: onglet === t.key ? "white" : "#4a6b3a",
-            fontWeight: 700, fontSize: 13, fontFamily: "sans-serif"
-          }}>
-            {t.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Disponibles */}
-      {onglet === "disponibles" && (
+      {/* Vue Disponibles */}
+      {mode === "disponibles" && (
         <div>
           {/* Filtres */}
           <div style={{ display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
@@ -170,7 +161,6 @@ export default function Collecteur({ utilisateur }) {
             )}
           </div>
 
-          {/* Compteur filtré */}
           <div style={{ fontSize: 12, color: "#6b9e5a", marginBottom: 10, textAlign: "right" }}>
             {disponiblesFiltres.length} résultat{disponiblesFiltres.length > 1 ? "s" : ""}
           </div>
@@ -180,27 +170,33 @@ export default function Collecteur({ utilisateur }) {
               Aucun signalement pour ce filtre
             </div>
           )}
+
           {disponiblesFiltres.map(s => (
             <CarteSignalement key={s.id} s={s} actions={
-              <button onClick={() => accepter(s.id)} style={{
-                width: "100%", padding: "10px", background: "#4caf50", color: "white",
-                border: "none", borderRadius: 10, fontWeight: 700, cursor: "pointer", fontSize: 13
-              }}>
-                ✋ Accepter cette collecte
-              </button>
+                        <button onClick={() => {
+              if (window.confirm("Voulez-vous accepter cette collecte ?\n\n📍 " + s.commune + " — " + s.quartier + "\n🗑️ " + s.type + " · " + s.volume)) {
+                accepter(s.id);
+              }
+            }} style={{
+              width: "100%", padding: "10px", background: "#4caf50", color: "white",
+              border: "none", borderRadius: 10, fontWeight: 700, cursor: "pointer", fontSize: 13
+            }}>
+              ✋ Accepter cette collecte
+            </button>
             } />
           ))}
         </div>
       )}
 
-      {/* Mes collectes */}
-      {onglet === "mescollectes" && (
+      {/* Vue Mes collectes */}
+      {mode === "mescollectes" && (
         <div>
           {mesCollectes.length === 0 && (
             <div style={{ textAlign: "center", padding: 40, color: "#6b9e5a", fontSize: 13 }}>
               Vous n'avez pas encore de collectes
             </div>
           )}
+
           {mesCollectes.map(s => (
             <CarteSignalement key={s.id} s={s} actions={
               s.status === "en cours" ? (
