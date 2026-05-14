@@ -353,7 +353,7 @@ export default function App() {
           <span style={{ color: "#a3e635" }}>votre quartier</span>
         </h2>
         <p style={{ color: "#86efac", fontSize: 13, margin: "0 0 28px", lineHeight: 1.5 }}>
-          La plateforme de collecte de déchets<br />en Côte d'Ivoire
+          La plateforme de collecte et ramassage<br />personnel de déchets en Côte d'Ivoire
         </p>
 
         <div style={{ display: "flex", gap: 10, maxWidth: 340, margin: "0 auto" }}>
