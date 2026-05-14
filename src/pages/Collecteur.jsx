@@ -1,9 +1,6 @@
-// Ce fichier affiche les signalements avec image à gauche, infos à droite et filtres
-
 import { useState, useEffect } from "react";
 import { collection, onSnapshot, doc, updateDoc, query, where } from "firebase/firestore";
 import { db } from "../firebase/config";
-
 
 const nomAffiche = (nom) => nom?.trim().split(/\s+/).pop() || nom || "";
 
@@ -11,16 +8,16 @@ const timeAgo = (timestamp) => {
   if (!timestamp?.seconds) return "";
   const now = Date.now();
   const diff = Math.floor((now - timestamp.seconds * 1000) / 1000);
-  if (diff < 60) return "Il y a quelques secondes";
-  if (diff < 3600) return `Il y a ${Math.floor(diff / 60)} min`;
-  if (diff < 86400) return `Il y a ${Math.floor(diff / 3600)} h`;
-  return `Il y a ${Math.floor(diff / 86400)} j`;
+  if (diff < 60) return "À l'instant";
+  if (diff < 3600) return `${Math.floor(diff / 60)} min`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)} h`;
+  return `${Math.floor(diff / 86400)} j`;
 };
 
-const STATUS_COLORS = {
-  "disponible": { bg: "#dcfce7", text: "#15803d" },
-  "en cours":   { bg: "#fef9c3", text: "#92400e" },
-  "collecté":   { bg: "#f1f5f9", text: "#64748b" },
+const STATUS = {
+  "disponible": { bg: "#f0fdf4", text: "#16a34a", border: "#bbf7d0" },
+  "en cours":   { bg: "#fffbeb", text: "#d97706", border: "#fde68a" },
+  "collecté":   { bg: "#f8fafc", text: "#64748b", border: "#e2e8f0" },
 };
 
 export default function Collecteur({ utilisateur, mode }) {
@@ -55,17 +52,10 @@ export default function Collecteur({ utilisateur, mode }) {
   const notifierMenage = async (menageTelephone) => {
     const message = `✅ *Votre signalement a été accepté !*\n\n🚛 *Collecteur :* ${nomAffiche(utilisateur.nom)}\n📞 *Téléphone :* +${utilisateur.uid}\n\nIl arrive bientôt. Merci de faire confiance à Poubelle-CI ! 🗑️`;
     try {
-      const r = await fetch("https://wasenderapi.com/api/send-message", {
+      await fetch("https://wasenderapi.com/api/send-message", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${import.meta.env.VITE_WASENDER_API_KEY}`
-        },
-        body: JSON.stringify({
-          sessionId: import.meta.env.VITE_WASENDER_SESSION_ID,
-          to: menageTelephone,
-          text: message
-        })
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${import.meta.env.VITE_WASENDER_API_KEY}` },
+        body: JSON.stringify({ sessionId: import.meta.env.VITE_WASENDER_SESSION_ID, to: menageTelephone, text: message })
       });
     } catch (e) {
       console.error("WaSender erreur:", e.message);
@@ -73,11 +63,7 @@ export default function Collecteur({ utilisateur, mode }) {
   };
 
   const accepter = async (id, signalement) => {
-    await updateDoc(doc(db, "signalements", id), {
-      status: "en cours",
-      collecteurId: utilisateur.uid,
-      collecteurNom: utilisateur.nom
-    });
+    await updateDoc(doc(db, "signalements", id), { status: "en cours", collecteurId: utilisateur.uid, collecteurNom: utilisateur.nom });
     if (signalement.uid) await notifierMenage(signalement.uid);
   };
 
@@ -86,71 +72,96 @@ export default function Collecteur({ utilisateur, mode }) {
   };
 
   const communesDisponibles = [...new Set(disponibles.map(s => s.commune).filter(Boolean))].sort();
-
   const disponiblesFiltres = disponibles
     .filter(s => filtreCommune ? s.commune === filtreCommune : true)
     .filter(s => filtreUrgent ? s.urgent : true);
 
-  const CarteSignalement = ({ s, actions }) => {
-    const sc = STATUS_COLORS[s.status] || STATUS_COLORS["disponible"];
+  const Carte = ({ s, actions }) => {
+    const st = STATUS[s.status] || STATUS["disponible"];
     return (
-      <div style={{ background: "white", borderRadius: 14, border: `1px solid ${s.urgent ? "#fee2e2" : "#e2f0e2"}`, marginBottom: 12, overflow: "hidden" }}>
+      <div style={{
+        background: "white", borderRadius: 16, marginBottom: 12, overflow: "hidden",
+        boxShadow: s.urgent ? "0 0 0 2px #fca5a5, 0 4px 16px rgba(239,68,68,0.08)" : "0 2px 12px rgba(0,0,0,0.07)"
+      }}>
         <div style={{ display: "flex" }}>
-          <div style={{ width: 110, minHeight: 110, flexShrink: 0, background: "#f0faf0", position: "relative", overflow: "hidden" }}>
+          {/* Image */}
+          <div style={{ width: 100, minHeight: 120, flexShrink: 0, position: "relative", overflow: "hidden", background: "#f1f5f9" }}>
             {s.photo ? (
-              <img src={s.photo} alt="poubelle"
-                style={{ width: "100%", height: "100%", objectFit: "cover", position: "absolute", inset: 0 }} />
+              <img src={s.photo} alt="poubelle" style={{ width: "100%", height: "100%", objectFit: "cover", position: "absolute", inset: 0 }} />
             ) : (
-              <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 4 }}>
+              <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: "linear-gradient(135deg, #f0fdf4, #dcfce7)" }}>
                 <span style={{ fontSize: 28 }}>🗑️</span>
-                <span style={{ fontSize: 10, color: "#6b9e5a" }}>Pas de photo</span>
+                <span style={{ fontSize: 9, color: "#86efac", fontWeight: 600, marginTop: 4 }}>Pas de photo</span>
               </div>
+            )}
+            {s.urgent && (
+              <div style={{ position: "absolute", top: 6, left: 6, background: "#ef4444", color: "white", fontSize: 9, fontWeight: 800, padding: "2px 6px", borderRadius: 6 }}>URGENT</div>
             )}
           </div>
 
-          <div style={{ flex: 1, padding: "10px 12px", display: "flex", flexDirection: "column", gap: 4 }}>
-            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-              {s.urgent && <span style={{ background: "#fee2e2", color: "#ef4444", fontSize: 10, fontWeight: 800, padding: "2px 8px", borderRadius: 10 }}>🔴 URGENT</span>}
-              <span style={{ background: sc.bg, color: sc.text, fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 10 }}>{s.status}</span>
+          {/* Infos */}
+          <div style={{ flex: 1, padding: "12px 14px", display: "flex", flexDirection: "column", gap: 5 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+              <div style={{ fontSize: 15, fontWeight: 800, color: "#0f172a" }}>{nomAffiche(s.nom)}</div>
+              <div style={{ fontSize: 10, color: "#94a3b8", whiteSpace: "nowrap", marginLeft: 6 }}>🕐 {timeAgo(s.createdAt)}</div>
             </div>
-            <div style={{ fontWeight: 700, fontSize: 13, color: "#1a2e1a" }}>{nomAffiche(s.nom)}</div>
-            <div style={{ fontSize: 12, color: "#6b9e5a" }}>📍 {s.commune} — {s.quartier}</div>
-            <div style={{ fontSize: 12, color: "#4a6b3a" }}>🗑️ {s.type} · {s.volume}</div>
-            {s.uid && <div style={{ fontSize: 12, color: "#2e7d32", fontWeight: 600 }}>📞 +{s.uid}</div>}
-            {s.lat && (
-              <a href={`https://www.google.com/maps?q=${s.lat},${s.lng}`} target="_blank" rel="noreferrer"
-                style={{ fontSize: 11, color: "#4caf50", textDecoration: "none" }}>
-                🗺️ Voir sur la carte
-              </a>
+
+            <div style={{ fontSize: 12, color: "#16a34a", fontWeight: 700 }}>
+              📍 {s.commune} <span style={{ color: "#94a3b8", fontWeight: 400 }}>— {s.quartier}</span>
+            </div>
+
+            <div style={{ fontSize: 11, color: "#475569" }}>🗑️ {s.type}</div>
+
+            {s.uid && (
+              <div style={{ fontSize: 11, color: "#0f172a", fontWeight: 700 }}>📞 +{s.uid}</div>
             )}
-            {s.notes && <div style={{ fontSize: 11, color: "#94a3b8" }}>💬 {s.notes}</div>}
-            <div style={{ fontSize: 10, color: "#94a3b8" }}>🕐 {timeAgo(s.createdAt)}</div>
+
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 2 }}>
+              <span style={{ background: st.bg, color: st.text, border: `1px solid ${st.border}`, fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 20 }}>
+                {s.status}
+              </span>
+              <span style={{ background: "#f8fafc", color: "#475569", border: "1px solid #e2e8f0", fontSize: 10, padding: "2px 8px", borderRadius: 20 }}>
+                {s.volume}
+              </span>
+              {s.lat && (
+                <a href={`https://www.google.com/maps?q=${s.lat},${s.lng}`} target="_blank" rel="noreferrer" style={{ textDecoration: "none" }}>
+                  <span style={{ background: "#eff6ff", color: "#3b82f6", border: "1px solid #bfdbfe", fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 20 }}>🗺️ GPS</span>
+                </a>
+              )}
+            </div>
+
+            {s.notes && <div style={{ fontSize: 11, color: "#94a3b8", fontStyle: "italic" }}>💬 {s.notes}</div>}
           </div>
         </div>
 
-        <div style={{ borderTop: "1px solid #e2f0e2", padding: "10px 12px" }}>
+        <div style={{ borderTop: "1px solid #f1f5f9", padding: "10px 14px" }}>
           {actions}
         </div>
       </div>
     );
   };
 
-  if (loading) return <div style={{ padding: 40, textAlign: "center" }}>⏳ Chargement...</div>;
+  if (loading) return (
+    <div style={{ padding: 60, textAlign: "center", color: "#94a3b8" }}>
+      <div style={{ fontSize: 32, marginBottom: 8 }}>⏳</div>
+      <div style={{ fontSize: 13 }}>Chargement...</div>
+    </div>
+  );
 
   return (
-    <div style={{ padding: 20, maxWidth: 440, margin: "0 auto" }}>
+    <div style={{ padding: "16px 16px", maxWidth: 440, margin: "0 auto" }}>
 
       {/* Stats */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 20 }}>
         {[
-          { label: "Disponibles", value: disponibles.length, icon: "📦", color: "#22c55e" },
-          { label: "En cours", value: mesCollectes.filter(s => s.status === "en cours").length, icon: "⏳", color: "#f59e0b" },
-          { label: "Collectés", value: mesCollectes.filter(s => s.status === "collecté").length, icon: "✅", color: "#3b82f6" },
+          { label: "Disponibles", value: disponibles.length, icon: "📦", color: "#16a34a", bg: "linear-gradient(135deg, #f0fdf4, #dcfce7)", border: "#bbf7d0" },
+          { label: "En cours", value: mesCollectes.filter(s => s.status === "en cours").length, icon: "⏳", color: "#d97706", bg: "linear-gradient(135deg, #fffbeb, #fef3c7)", border: "#fde68a" },
+          { label: "Collectés", value: mesCollectes.filter(s => s.status === "collecté").length, icon: "✅", color: "#3b82f6", bg: "linear-gradient(135deg, #eff6ff, #dbeafe)", border: "#bfdbfe" },
         ].map(s => (
-          <div key={s.label} style={{ background: "#f0faf0", borderRadius: 12, padding: "12px 10px", textAlign: "center", border: "1px solid #c8e6c0" }}>
-            <div style={{ fontSize: 20 }}>{s.icon}</div>
-            <div style={{ fontSize: 22, fontWeight: 800, color: s.color, lineHeight: 1 }}>{s.value}</div>
-            <div style={{ fontSize: 10, color: "#4a6b3a", fontWeight: 600 }}>{s.label}</div>
+          <div key={s.label} style={{ background: s.bg, borderRadius: 14, padding: "14px 8px", textAlign: "center", border: `1px solid ${s.border}`, boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
+            <div style={{ fontSize: 18 }}>{s.icon}</div>
+            <div style={{ fontSize: 24, fontWeight: 900, color: s.color, lineHeight: 1.1 }}>{s.value}</div>
+            <div style={{ fontSize: 10, color: "#64748b", fontWeight: 600, marginTop: 2 }}>{s.label}</div>
           </div>
         ))}
       </div>
@@ -158,55 +169,55 @@ export default function Collecteur({ utilisateur, mode }) {
       {/* Vue Disponibles */}
       {mode === "disponibles" && (
         <div>
-          {/* Filtres */}
           <div style={{ display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
-            <select value={filtreCommune} onChange={e => setFiltreCommune(e.target.value)}
-              style={{ flex: 1, padding: "8px 10px", borderRadius: 10, border: "1.5px solid #c8e6c0", fontSize: 12, color: "#1a2e1a", background: "white", outline: "none" }}>
+            <select value={filtreCommune} onChange={e => setFiltreCommune(e.target.value)} style={{
+              flex: 1, minWidth: 130, padding: "9px 12px", borderRadius: 12, border: "1.5px solid #e2e8f0",
+              fontSize: 12, color: "#0f172a", background: "white", outline: "none", fontWeight: 600,
+              boxShadow: "0 1px 3px rgba(0,0,0,0.06)"
+            }}>
               <option value="">Toutes les communes</option>
               {communesDisponibles.map(c => <option key={c} value={c}>{c}</option>)}
             </select>
 
             <button onClick={() => setFiltreUrgent(!filtreUrgent)} style={{
-              padding: "8px 12px", borderRadius: 10, border: "1.5px solid #fee2e2",
-              background: filtreUrgent ? "#fee2e2" : "white",
-              color: filtreUrgent ? "#ef4444" : "#94a3b8",
-              fontSize: 12, fontWeight: 700, cursor: "pointer"
-            }}>
-              🔴 Urgent
-            </button>
+              padding: "9px 14px", borderRadius: 12, cursor: "pointer", fontWeight: 700, fontSize: 12,
+              border: filtreUrgent ? "1.5px solid #ef4444" : "1.5px solid #e2e8f0",
+              background: filtreUrgent ? "#fef2f2" : "white", color: filtreUrgent ? "#ef4444" : "#64748b",
+              boxShadow: "0 1px 3px rgba(0,0,0,0.06)"
+            }}>🔴 Urgent</button>
 
             {(filtreCommune || filtreUrgent) && (
               <button onClick={() => { setFiltreCommune(""); setFiltreUrgent(false); }} style={{
-                padding: "8px 12px", borderRadius: 10, border: "1.5px solid #e2f0e2",
-                background: "white", color: "#6b9e5a", fontSize: 12, fontWeight: 700, cursor: "pointer"
-              }}>
-                ✕ Réinitialiser
-              </button>
+                padding: "9px 12px", borderRadius: 12, border: "1.5px solid #e2e8f0",
+                background: "white", color: "#64748b", fontSize: 12, cursor: "pointer"
+              }}>✕</button>
             )}
           </div>
 
-          <div style={{ fontSize: 12, color: "#6b9e5a", marginBottom: 10, textAlign: "right" }}>
+          <div style={{ fontSize: 12, color: "#94a3b8", marginBottom: 12, textAlign: "right", fontWeight: 600 }}>
             {disponiblesFiltres.length} résultat{disponiblesFiltres.length > 1 ? "s" : ""}
           </div>
 
           {disponiblesFiltres.length === 0 && (
-            <div style={{ textAlign: "center", padding: 40, color: "#6b9e5a", fontSize: 13 }}>
-              Aucun signalement pour ce filtre
+            <div style={{ textAlign: "center", padding: 48, color: "#94a3b8" }}>
+              <div style={{ fontSize: 36, marginBottom: 8 }}>🗑️</div>
+              <div style={{ fontSize: 13 }}>Aucun signalement pour ce filtre</div>
             </div>
           )}
 
           {disponiblesFiltres.map(s => (
-            <CarteSignalement key={s.id} s={s} actions={
-                        <button onClick={() => {
-              if (window.confirm("Voulez-vous accepter cette collecte ?\n\n📍 " + s.commune + " — " + s.quartier + "\n🗑️ " + s.type + " · " + s.volume)) {
-                accepter(s.id, s);
-              }
-            }} style={{
-              width: "100%", padding: "10px", background: "#4caf50", color: "white",
-              border: "none", borderRadius: 10, fontWeight: 700, cursor: "pointer", fontSize: 13
-            }}>
-              ✋ Accepter cette collecte
-            </button>
+            <Carte key={s.id} s={s} actions={
+              <button onClick={() => {
+                if (window.confirm("Accepter cette collecte ?\n\n📍 " + s.commune + " — " + s.quartier + "\n🗑️ " + s.type + " · " + s.volume)) {
+                  accepter(s.id, s);
+                }
+              }} style={{
+                width: "100%", padding: "11px", cursor: "pointer", fontWeight: 800, fontSize: 13,
+                background: "linear-gradient(135deg, #16a34a, #15803d)", color: "white",
+                border: "none", borderRadius: 12, boxShadow: "0 3px 10px rgba(22,163,74,0.3)"
+              }}>
+                ✋ Accepter cette collecte
+              </button>
             } />
           ))}
         </div>
@@ -216,22 +227,24 @@ export default function Collecteur({ utilisateur, mode }) {
       {mode === "mescollectes" && (
         <div>
           {mesCollectes.length === 0 && (
-            <div style={{ textAlign: "center", padding: 40, color: "#6b9e5a", fontSize: 13 }}>
-              Vous n'avez pas encore de collectes
+            <div style={{ textAlign: "center", padding: 48, color: "#94a3b8" }}>
+              <div style={{ fontSize: 36, marginBottom: 8 }}>🚛</div>
+              <div style={{ fontSize: 13 }}>Vous n'avez pas encore de collectes</div>
             </div>
           )}
 
           {mesCollectes.map(s => (
-            <CarteSignalement key={s.id} s={s} actions={
+            <Carte key={s.id} s={s} actions={
               s.status === "en cours" ? (
                 <button onClick={() => terminer(s.id)} style={{
-                  width: "100%", padding: "10px", background: "#2e7d32", color: "white",
-                  border: "none", borderRadius: 10, fontWeight: 700, cursor: "pointer", fontSize: 13
+                  width: "100%", padding: "11px", cursor: "pointer", fontWeight: 800, fontSize: 13,
+                  background: "linear-gradient(135deg, #0f2d0f, #166534)", color: "white",
+                  border: "none", borderRadius: 12, boxShadow: "0 3px 10px rgba(15,45,15,0.3)"
                 }}>
                   ✅ Marquer comme collecté
                 </button>
               ) : (
-                <div style={{ fontSize: 12, color: "#94a3b8", textAlign: "center" }}>
+                <div style={{ fontSize: 12, color: "#94a3b8", textAlign: "center", padding: "4px 0" }}>
                   {s.status === "collecté" ? "✅ Collecte terminée" : ""}
                 </div>
               )
