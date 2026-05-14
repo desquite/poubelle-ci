@@ -1,6 +1,11 @@
 import { useState, useEffect } from "react";
 import { collection, onSnapshot, doc, updateDoc, query, where } from "firebase/firestore";
 import { db } from "../firebase/config";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+  faTrash, faLocationDot, faClock, faMap, faTriangleExclamation, faXmark,
+  faTruck, faBox, faCheck, faPhone, faHandPointer, faComment
+} from "@fortawesome/free-solid-svg-icons";
 
 const nomAffiche = (nom) => nom?.trim().split(/\s+/).pop() || nom || "";
 
@@ -102,7 +107,7 @@ export default function Collecteur({ utilisateur, mode }) {
               <img src={s.photo} alt="poubelle" style={{ width: "100%", height: "100%", objectFit: "cover", position: "absolute", inset: 0 }} />
             ) : (
               <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: "linear-gradient(135deg, #f0fdf4, #dcfce7)" }}>
-                <span style={{ fontSize: 28 }}>🗑️</span>
+                <span style={{ fontSize: 28, color: "#86efac" }}><FontAwesomeIcon icon={faTrash} /></span>
                 <span style={{ fontSize: 9, color: "#86efac", fontWeight: 600, marginTop: 4 }}>Pas de photo</span>
               </div>
             )}
@@ -115,17 +120,17 @@ export default function Collecteur({ utilisateur, mode }) {
           <div style={{ flex: 1, padding: "12px 14px", display: "flex", flexDirection: "column", gap: 5 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
               <div style={{ fontSize: 15, fontWeight: 800, color: "#0f172a" }}>{nomAffiche(s.nom)}</div>
-              <div style={{ fontSize: 10, color: "#94a3b8", whiteSpace: "nowrap", marginLeft: 6 }}>🕐 {timeAgo(s.createdAt)}</div>
+              <div style={{ fontSize: 10, color: "#94a3b8", whiteSpace: "nowrap", marginLeft: 6 }}><FontAwesomeIcon icon={faClock} style={{ marginRight: 3 }} />{timeAgo(s.createdAt)}</div>
             </div>
 
             <div style={{ fontSize: 12, color: "#16a34a", fontWeight: 700 }}>
-              📍 {s.commune} <span style={{ color: "#94a3b8", fontWeight: 400 }}>— {s.quartier}</span>
+              <FontAwesomeIcon icon={faLocationDot} style={{ marginRight: 4 }} />{s.commune} <span style={{ color: "#94a3b8", fontWeight: 400 }}>— {s.quartier}</span>
             </div>
 
-            <div style={{ fontSize: 11, color: "#475569" }}>🗑️ {s.type}</div>
+            <div style={{ fontSize: 11, color: "#475569" }}><FontAwesomeIcon icon={faTrash} style={{ marginRight: 4 }} />{s.type}</div>
 
             {s.uid && (
-              <div style={{ fontSize: 11, color: "#0f172a", fontWeight: 700 }}>📞 +{s.uid}</div>
+              <div style={{ fontSize: 11, color: "#0f172a", fontWeight: 700 }}><FontAwesomeIcon icon={faPhone} style={{ marginRight: 4 }} />+{s.uid}</div>
             )}
 
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 2 }}>
@@ -137,12 +142,12 @@ export default function Collecteur({ utilisateur, mode }) {
               </span>
               {s.lat && (
                 <a href={`https://www.google.com/maps?q=${s.lat},${s.lng}`} target="_blank" rel="noreferrer" style={{ textDecoration: "none" }}>
-                  <span style={{ background: "#eff6ff", color: "#3b82f6", border: "1px solid #bfdbfe", fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 20 }}>🗺️ GPS</span>
+                  <span style={{ background: "#eff6ff", color: "#3b82f6", border: "1px solid #bfdbfe", fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 20 }}><FontAwesomeIcon icon={faMap} style={{ marginRight: 4 }} />GPS</span>
                 </a>
               )}
             </div>
 
-            {s.notes && <div style={{ fontSize: 11, color: "#94a3b8", fontStyle: "italic" }}>💬 {s.notes}</div>}
+            {s.notes && <div style={{ fontSize: 11, color: "#94a3b8", fontStyle: "italic" }}><FontAwesomeIcon icon={faComment} style={{ marginRight: 4 }} />{s.notes}</div>}
           </div>
         </div>
 
@@ -155,7 +160,7 @@ export default function Collecteur({ utilisateur, mode }) {
 
   if (loading) return (
     <div style={{ padding: 60, textAlign: "center", color: "#94a3b8" }}>
-      <div style={{ fontSize: 32, marginBottom: 8 }}>⏳</div>
+      <div style={{ fontSize: 32, marginBottom: 8 }}><FontAwesomeIcon icon={faClock} /></div>
       <div style={{ fontSize: 13 }}>Chargement...</div>
     </div>
   );
@@ -166,12 +171,12 @@ export default function Collecteur({ utilisateur, mode }) {
       {/* Stats */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 20 }}>
         {[
-          { label: "Disponibles", value: disponibles.length, icon: "📦", color: "#16a34a", bg: "linear-gradient(135deg, #f0fdf4, #dcfce7)", border: "#bbf7d0" },
-          { label: "En cours", value: mesCollectes.filter(s => s.status === "en cours").length, icon: "⏳", color: "#d97706", bg: "linear-gradient(135deg, #fffbeb, #fef3c7)", border: "#fde68a" },
-          { label: "Collectés", value: mesCollectes.filter(s => s.status === "collecté").length, icon: "✅", color: "#3b82f6", bg: "linear-gradient(135deg, #eff6ff, #dbeafe)", border: "#bfdbfe" },
+          { label: "Disponibles", value: disponibles.length, icon: faBox, color: "#16a34a", bg: "linear-gradient(135deg, #f0fdf4, #dcfce7)", border: "#bbf7d0" },
+          { label: "En cours", value: mesCollectes.filter(s => s.status === "en cours").length, icon: faClock, color: "#d97706", bg: "linear-gradient(135deg, #fffbeb, #fef3c7)", border: "#fde68a" },
+          { label: "Collectés", value: mesCollectes.filter(s => s.status === "collecté").length, icon: faCheck, color: "#3b82f6", bg: "linear-gradient(135deg, #eff6ff, #dbeafe)", border: "#bfdbfe" },
         ].map(s => (
           <div key={s.label} style={{ background: s.bg, borderRadius: 14, padding: "14px 8px", textAlign: "center", border: `1px solid ${s.border}`, boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
-            <div style={{ fontSize: 18 }}>{s.icon}</div>
+            <div style={{ fontSize: 18 }}><FontAwesomeIcon icon={s.icon} /></div>
             <div style={{ fontSize: 24, fontWeight: 900, color: s.color, lineHeight: 1.1 }}>{s.value}</div>
             <div style={{ fontSize: 10, color: "#64748b", fontWeight: 600, marginTop: 2 }}>{s.label}</div>
           </div>
@@ -196,13 +201,13 @@ export default function Collecteur({ utilisateur, mode }) {
               border: filtreUrgent ? "1.5px solid #ef4444" : "1.5px solid #e2e8f0",
               background: filtreUrgent ? "#fef2f2" : "white", color: filtreUrgent ? "#ef4444" : "#64748b",
               boxShadow: "0 1px 3px rgba(0,0,0,0.06)"
-            }}>🔴 Urgent</button>
+            }}><FontAwesomeIcon icon={faTriangleExclamation} style={{ marginRight: 5 }} />Urgent</button>
 
             {(filtreCommune || filtreUrgent) && (
               <button onClick={() => { setFiltreCommune(""); setFiltreUrgent(false); }} style={{
                 padding: "9px 12px", borderRadius: 12, border: "1.5px solid #e2e8f0",
                 background: "white", color: "#64748b", fontSize: 12, cursor: "pointer"
-              }}>✕</button>
+              }}><FontAwesomeIcon icon={faXmark} /></button>
             )}
           </div>
 
@@ -212,7 +217,7 @@ export default function Collecteur({ utilisateur, mode }) {
 
           {disponiblesFiltres.length === 0 && (
             <div style={{ textAlign: "center", padding: 48, color: "#94a3b8" }}>
-              <div style={{ fontSize: 36, marginBottom: 8 }}>🗑️</div>
+              <div style={{ fontSize: 36, marginBottom: 8 }}><FontAwesomeIcon icon={faTrash} /></div>
               <div style={{ fontSize: 13 }}>Aucun signalement pour ce filtre</div>
             </div>
           )}
@@ -228,7 +233,7 @@ export default function Collecteur({ utilisateur, mode }) {
                 background: "linear-gradient(135deg, #16a34a, #15803d)", color: "white",
                 border: "none", borderRadius: 12, boxShadow: "0 3px 10px rgba(22,163,74,0.3)"
               }}>
-                ✋ Accepter cette collecte
+                <FontAwesomeIcon icon={faHandPointer} style={{ marginRight: 6 }} />Accepter cette collecte
               </button>
             } />
           ))}
@@ -240,7 +245,7 @@ export default function Collecteur({ utilisateur, mode }) {
         <div>
           {mesCollectes.length === 0 && (
             <div style={{ textAlign: "center", padding: 48, color: "#94a3b8" }}>
-              <div style={{ fontSize: 36, marginBottom: 8 }}>🚛</div>
+              <div style={{ fontSize: 36, marginBottom: 8 }}><FontAwesomeIcon icon={faTruck} /></div>
               <div style={{ fontSize: 13 }}>Vous n'avez pas encore de collectes</div>
             </div>
           )}
@@ -253,11 +258,11 @@ export default function Collecteur({ utilisateur, mode }) {
                   background: "linear-gradient(135deg, #0f2d0f, #166534)", color: "white",
                   border: "none", borderRadius: 12, boxShadow: "0 3px 10px rgba(15,45,15,0.3)"
                 }}>
-                  ✅ Marquer comme collecté
+                  <FontAwesomeIcon icon={faCheck} style={{ marginRight: 6 }} />Marquer comme collecté
                 </button>
               ) : (
                 <div style={{ fontSize: 12, color: "#94a3b8", textAlign: "center", padding: "4px 0" }}>
-                  {s.status === "collecté" ? "✅ Collecte terminée" : ""}
+                  {s.status === "collecté" ? <><FontAwesomeIcon icon={faCheck} style={{ marginRight: 5 }} />Collecte terminée</> : ""}
                 </div>
               )
             } />

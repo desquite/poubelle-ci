@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../firebase/config";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faCheck, faArrowLeft, faComment, faLock, faShieldHalved } from "@fortawesome/free-solid-svg-icons";
 
 const WASENDER_KEY = import.meta.env.VITE_WASENDER_API_KEY;
 const SESSION_ID = import.meta.env.VITE_WASENDER_SESSION_ID;
@@ -99,7 +101,7 @@ export default function Connexion({ onConnecte }) {
 
   if (etape === 1) return (
     <div style={{ padding: 24, maxWidth: 400, margin: "0 auto" }}>
-      <h2 style={{ color: "#1a2e1a", marginBottom: 6 }}>🔐 Se connecter</h2>
+      <h2 style={{ color: "#1a2e1a", marginBottom: 6 }}><FontAwesomeIcon icon={faLock} style={{ marginRight: 8, color: "#4caf50" }} />Se connecter</h2>
       <p style={{ color: "#6b9e5a", fontSize: 13, marginBottom: 24 }}>Connectez-vous à votre compte</p>
 
       <label style={{ fontSize: 12, fontWeight: 700, color: "#2e7d32" }}>Numéro WhatsApp</label>
@@ -113,14 +115,14 @@ export default function Connexion({ onConnecte }) {
 
       <button onClick={envoyerCode} disabled={!telephone || loading}
         style={{...btnStyle, opacity: !telephone ? 0.5 : 1}}>
-        {loading ? "Vérification..." : "💬 Recevoir le code WhatsApp"}
+        {loading ? "Vérification..." : <><FontAwesomeIcon icon={faComment} style={{ marginRight: 6 }} />Recevoir le code WhatsApp</>}
       </button>
     </div>
   );
 
   return (
     <div style={{ padding: 24, maxWidth: 400, margin: "0 auto" }}>
-      <h2 style={{ color: "#1a2e1a", marginBottom: 6 }}>✅ Vérification</h2>
+      <h2 style={{ color: "#1a2e1a", marginBottom: 6 }}><FontAwesomeIcon icon={faShieldHalved} style={{ marginRight: 8, color: "#4caf50" }} />Vérification</h2>
       <p style={{ color: "#4a6b3a", fontSize: 13, marginBottom: 16 }}>
         Code envoyé sur WhatsApp au <strong>+225 {telephone}</strong>
       </p>
@@ -134,12 +136,12 @@ export default function Connexion({ onConnecte }) {
 
       <button onClick={verifierCode} disabled={!code || loading}
         style={{...btnStyle, opacity: !code ? 0.5 : 1}}>
-        {loading ? "Vérification..." : "✅ Confirmer le code"}
+        {loading ? "Vérification..." : <><FontAwesomeIcon icon={faCheck} style={{ marginRight: 6 }} />Confirmer le code</>}
       </button>
 
       <button onClick={() => setEtape(1)}
         style={{...btnStyle, background: "#e8f5e3", color: "#2e7d32", marginTop: 8}}>
-        ← Retour
+        <FontAwesomeIcon icon={faArrowLeft} style={{ marginRight: 6 }} />Retour
       </button>
     </div>
   );

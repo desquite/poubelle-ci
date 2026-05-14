@@ -4,6 +4,8 @@ import { useState } from "react";
 import { doc, setDoc } from "firebase/firestore";
 import { db } from "../firebase/config";
 import { COMMUNES_QUARTIERS, COMMUNES } from "../quartiers";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faHouse, faTruck, faCheck, faArrowLeft, faComment, faUserPlus, faShieldHalved } from "@fortawesome/free-solid-svg-icons";
 
 const WASENDER_KEY = import.meta.env.VITE_WASENDER_API_KEY;
 const SESSION_ID = import.meta.env.VITE_WASENDER_SESSION_ID;
@@ -102,23 +104,23 @@ export default function Inscription({ onInscrit }) {
 
   if (etape === 1) return (
     <div style={{ padding: 24, maxWidth: 400, margin: "0 auto" }}>
-      <h2 style={{ color: "#1a2e1a", marginBottom: 6 }}>📝 Créer un compte</h2>
+      <h2 style={{ color: "#1a2e1a", marginBottom: 6 }}><FontAwesomeIcon icon={faUserPlus} style={{ marginRight: 8, color: "#4caf50" }} />Créer un compte</h2>
       <p style={{ color: "#6b9e5a", fontSize: 13, marginBottom: 20 }}>Rejoignez Poubelle-CI</p>
 
       {/* Choix du rôle */}
       <p style={{ fontWeight: 700, color: "#2e7d32", marginBottom: 10 }}>Je suis...</p>
       <div style={{ display: "flex", gap: 10, marginBottom: 16 }}>
         {[
-          { key: "menage", label: "🏠 Ménage", desc: "Je signale mes poubelles" },
-          { key: "collecteur", label: "🚛 Collecteur", desc: "Je ramasse les poubelles" },
+          { key: "menage", icon: faHouse, label: "Ménage", desc: "Je signale mes poubelles" },
+          { key: "collecteur", icon: faTruck, label: "Collecteur", desc: "Je ramasse les poubelles" },
         ].map(r => (
           <div key={r.key} onClick={() => setRole(r.key)} style={{
             flex: 1, padding: 14, borderRadius: 12, cursor: "pointer", textAlign: "center",
             border: `2px solid ${role === r.key ? "#4caf50" : "#e2f0e2"}`,
             background: role === r.key ? "#f0fdf4" : "white"
           }}>
-            <div style={{ fontSize: 24 }}>{r.label.split(" ")[0]}</div>
-            <div style={{ fontWeight: 700, fontSize: 13, color: "#1a2e1a" }}>{r.label.split(" ")[1]}</div>
+            <div style={{ fontSize: 24 }}><FontAwesomeIcon icon={r.icon} /></div>
+            <div style={{ fontWeight: 700, fontSize: 13, color: "#1a2e1a" }}>{r.label}</div>
             <div style={{ fontSize: 11, color: "#6b9e5a" }}>{r.desc}</div>
           </div>
         ))}
@@ -162,14 +164,14 @@ export default function Inscription({ onInscrit }) {
       <button onClick={envoyerCode}
         disabled={!role || !nom || !telephone || !commune || !quartier || loading}
         style={{...btnStyle, opacity: (!role || !nom || !telephone || !commune || !quartier) ? 0.5 : 1}}>
-        {loading ? "Envoi en cours..." : "💬 Recevoir le code WhatsApp"}
+        {loading ? "Envoi en cours..." : <><FontAwesomeIcon icon={faComment} style={{ marginRight: 6 }} />Recevoir le code WhatsApp</>}
       </button>
     </div>
   );
 
   return (
     <div style={{ padding: 24, maxWidth: 400, margin: "0 auto" }}>
-      <h2 style={{ color: "#1a2e1a", marginBottom: 6 }}>✅ Vérification</h2>
+      <h2 style={{ color: "#1a2e1a", marginBottom: 6 }}><FontAwesomeIcon icon={faShieldHalved} style={{ marginRight: 8, color: "#4caf50" }} />Vérification</h2>
       <p style={{ color: "#4a6b3a", fontSize: 13, marginBottom: 16 }}>
         Un code a été envoyé sur WhatsApp au <strong>+225 {telephone}</strong>
       </p>
@@ -183,12 +185,12 @@ export default function Inscription({ onInscrit }) {
 
       <button onClick={verifierCode} disabled={!code || loading}
         style={{...btnStyle, opacity: !code ? 0.5 : 1}}>
-        {loading ? "Vérification..." : "✅ Confirmer le code"}
+        {loading ? "Vérification..." : <><FontAwesomeIcon icon={faCheck} style={{ marginRight: 6 }} />Confirmer le code</>}
       </button>
 
       <button onClick={() => setEtape(1)}
         style={{...btnStyle, background: "#e8f5e3", color: "#2e7d32", marginTop: 8}}>
-        ← Retour
+        <FontAwesomeIcon icon={faArrowLeft} style={{ marginRight: 6 }} />Retour
       </button>
     </div>
   );

@@ -1,6 +1,12 @@
 import { useState, useEffect } from "react";
 import { collection, onSnapshot, doc, updateDoc, query, orderBy } from "firebase/firestore";
 import { db } from "../firebase/config";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+  faTrash, faLocationDot, faTruck, faHouse, faBox, faChartBar,
+  faClipboardList, faPhone, faTriangleExclamation, faCheck,
+  faBan, faUnlock, faTrophy
+} from "@fortawesome/free-solid-svg-icons";
 
 const timeAgo = (timestamp) => {
   if (!timestamp?.seconds) return "";
@@ -89,13 +95,13 @@ export default function Admin({ onglet }) {
       {/* Stats principales */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 16 }}>
         {[
-          { label: "Total signalements", value: stats.total, icon: "📦", color: "#0f172a", bg: "linear-gradient(135deg, #f8fafc, #f1f5f9)", border: "#e2e8f0" },
-          { label: "Taux de collecte", value: `${stats.tauxCollecte}%`, icon: "📊", color: "#16a34a", bg: "linear-gradient(135deg, #f0fdf4, #dcfce7)", border: "#bbf7d0" },
-          { label: "Ménages inscrits", value: stats.menages, icon: "🏠", color: "#3b82f6", bg: "linear-gradient(135deg, #eff6ff, #dbeafe)", border: "#bfdbfe" },
-          { label: "Collecteurs actifs", value: stats.collecteurs, icon: "🚛", color: "#d97706", bg: "linear-gradient(135deg, #fffbeb, #fef3c7)", border: "#fde68a" },
+          { label: "Total signalements", value: stats.total, icon: faBox, color: "#0f172a", bg: "linear-gradient(135deg, #f8fafc, #f1f5f9)", border: "#e2e8f0" },
+          { label: "Taux de collecte", value: `${stats.tauxCollecte}%`, icon: faChartBar, color: "#16a34a", bg: "linear-gradient(135deg, #f0fdf4, #dcfce7)", border: "#bbf7d0" },
+          { label: "Ménages inscrits", value: stats.menages, icon: faHouse, color: "#3b82f6", bg: "linear-gradient(135deg, #eff6ff, #dbeafe)", border: "#bfdbfe" },
+          { label: "Collecteurs actifs", value: stats.collecteurs, icon: faTruck, color: "#d97706", bg: "linear-gradient(135deg, #fffbeb, #fef3c7)", border: "#fde68a" },
         ].map(s => (
           <div key={s.label} style={{ background: s.bg, borderRadius: 16, padding: "16px 14px", border: `1px solid ${s.border}`, boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
-            <div style={{ fontSize: 22 }}>{s.icon}</div>
+            <div style={{ fontSize: 22 }}><FontAwesomeIcon icon={s.icon} /></div>
             <div style={{ fontSize: 28, fontWeight: 900, color: s.color, lineHeight: 1.1, marginTop: 4 }}>{s.value}</div>
             <div style={{ fontSize: 11, color: "#64748b", fontWeight: 600, marginTop: 4 }}>{s.label}</div>
           </div>
@@ -104,12 +110,12 @@ export default function Admin({ onglet }) {
 
       {/* Statuts */}
       <div style={{ background: "white", borderRadius: 16, padding: "16px", marginBottom: 16, boxShadow: "0 2px 12px rgba(0,0,0,0.07)" }}>
-        <div style={{ fontSize: 13, fontWeight: 800, color: "#0f172a", marginBottom: 14 }}>📋 État des signalements</div>
+        <div style={{ fontSize: 13, fontWeight: 800, color: "#0f172a", marginBottom: 14 }}><FontAwesomeIcon icon={faClipboardList} style={{ marginRight: 6 }} />État des signalements</div>
         {[
           { label: "Disponibles", value: stats.disponibles, color: "#16a34a", bg: "#f0fdf4" },
           { label: "En cours", value: stats.enCours, color: "#d97706", bg: "#fffbeb" },
           { label: "Collectés", value: stats.collectes, color: "#64748b", bg: "#f8fafc" },
-          { label: "🔴 Urgents en attente", value: stats.urgents, color: "#ef4444", bg: "#fef2f2" },
+          { label: "Urgents en attente", value: stats.urgents, color: "#ef4444", bg: "#fef2f2", icon: faTriangleExclamation },
         ].map(s => (
           <div key={s.label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 12px", background: s.bg, borderRadius: 10, marginBottom: 8 }}>
             <span style={{ fontSize: 12, fontWeight: 600, color: "#475569" }}>{s.label}</span>
@@ -121,7 +127,7 @@ export default function Admin({ onglet }) {
       {/* Top communes */}
       {topCommunes.length > 0 && (
         <div style={{ background: "white", borderRadius: 16, padding: "16px", marginBottom: 16, boxShadow: "0 2px 12px rgba(0,0,0,0.07)" }}>
-          <div style={{ fontSize: 13, fontWeight: 800, color: "#0f172a", marginBottom: 14 }}>📍 Top communes actives</div>
+          <div style={{ fontSize: 13, fontWeight: 800, color: "#0f172a", marginBottom: 14 }}><FontAwesomeIcon icon={faLocationDot} style={{ marginRight: 6 }} />Top communes actives</div>
           {topCommunes.map(([commune, count], i) => (
             <div key={commune} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
               <div style={{ width: 24, height: 24, borderRadius: 8, background: "linear-gradient(135deg, #16a34a, #15803d)", color: "white", fontSize: 11, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center" }}>{i + 1}</div>
@@ -140,10 +146,10 @@ export default function Admin({ onglet }) {
       {/* Top collecteurs */}
       {topCollecteurs.length > 0 && (
         <div style={{ background: "white", borderRadius: 16, padding: "16px", boxShadow: "0 2px 12px rgba(0,0,0,0.07)" }}>
-          <div style={{ fontSize: 13, fontWeight: 800, color: "#0f172a", marginBottom: 14 }}>🚛 Meilleurs collecteurs</div>
+          <div style={{ fontSize: 13, fontWeight: 800, color: "#0f172a", marginBottom: 14 }}><FontAwesomeIcon icon={faTruck} style={{ marginRight: 6 }} />Meilleurs collecteurs</div>
           {topCollecteurs.map(([nom, count], i) => (
             <div key={nom} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
-              <div style={{ width: 24, height: 24, borderRadius: 8, background: i === 0 ? "linear-gradient(135deg, #f59e0b, #d97706)" : "linear-gradient(135deg, #94a3b8, #64748b)", color: "white", fontSize: 11, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center" }}>{i === 0 ? "🥇" : i + 1}</div>
+              <div style={{ width: 24, height: 24, borderRadius: 8, background: i === 0 ? "linear-gradient(135deg, #f59e0b, #d97706)" : "linear-gradient(135deg, #94a3b8, #64748b)", color: "white", fontSize: 11, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center" }}>{i === 0 ? <FontAwesomeIcon icon={faTrophy} /> : i + 1}</div>
               <div style={{ flex: 1, fontSize: 12, fontWeight: 700, color: "#0f172a" }}>{nom}</div>
               <div style={{ fontSize: 13, fontWeight: 800, color: "#d97706" }}>{count} collectes</div>
             </div>
@@ -182,7 +188,7 @@ export default function Admin({ onglet }) {
               <div style={{ width: 90, minHeight: 100, flexShrink: 0, position: "relative", background: "#f1f5f9" }}>
                 {s.photo ? <img src={s.photo} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", position: "absolute", inset: 0 }} /> : (
                   <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "linear-gradient(135deg, #f0fdf4, #dcfce7)" }}>
-                    <span style={{ fontSize: 24 }}>🗑️</span>
+                    <span style={{ fontSize: 24, color: "#86efac" }}><FontAwesomeIcon icon={faTrash} /></span>
                   </div>
                 )}
                 {s.urgent && <div style={{ position: "absolute", top: 5, left: 5, background: "#ef4444", color: "white", fontSize: 8, fontWeight: 800, padding: "2px 5px", borderRadius: 5 }}>URGENT</div>}
@@ -192,9 +198,9 @@ export default function Admin({ onglet }) {
                   <div style={{ fontSize: 13, fontWeight: 800, color: "#0f172a" }}>{s.nom}</div>
                   <div style={{ fontSize: 10, color: "#94a3b8" }}>{timeAgo(s.createdAt)}</div>
                 </div>
-                <div style={{ fontSize: 11, color: "#16a34a", fontWeight: 700 }}>📍 {s.commune} — {s.quartier}</div>
-                <div style={{ fontSize: 11, color: "#475569" }}>🗑️ {s.type} · {s.volume}</div>
-                {s.collecteurNom && <div style={{ fontSize: 11, color: "#64748b" }}>🚛 {s.collecteurNom}</div>}
+                <div style={{ fontSize: 11, color: "#16a34a", fontWeight: 700 }}><FontAwesomeIcon icon={faLocationDot} style={{ marginRight: 4 }} />{s.commune} — {s.quartier}</div>
+                <div style={{ fontSize: 11, color: "#475569" }}><FontAwesomeIcon icon={faTrash} style={{ marginRight: 4 }} />{s.type} · {s.volume}</div>
+                {s.collecteurNom && <div style={{ fontSize: 11, color: "#64748b" }}><FontAwesomeIcon icon={faTruck} style={{ marginRight: 4 }} />{s.collecteurNom}</div>}
                 <div style={{ display: "flex", gap: 6, marginTop: 2 }}>
                   <span style={{ background: st.bg, color: st.text, border: `1px solid ${st.border}`, fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 20 }}>{s.status}</span>
                 </div>
@@ -228,8 +234,8 @@ export default function Admin({ onglet }) {
                 <div style={{ fontSize: 14, fontWeight: 800, color: "#0f172a" }}>{u.nom}</div>
                 {u.bloque && <span style={{ background: "#fef2f2", color: "#ef4444", fontSize: 9, fontWeight: 800, padding: "2px 6px", borderRadius: 6 }}>BLOQUÉ</span>}
               </div>
-              <div style={{ fontSize: 11, color: "#94a3b8" }}>📞 +{u.telephone}</div>
-              <div style={{ fontSize: 11, color: "#64748b", marginTop: 2 }}>📍 {u.commune} — {u.quartier}</div>
+              <div style={{ fontSize: 11, color: "#94a3b8" }}><FontAwesomeIcon icon={faPhone} style={{ marginRight: 4 }} />+{u.telephone}</div>
+              <div style={{ fontSize: 11, color: "#64748b", marginTop: 2 }}><FontAwesomeIcon icon={faLocationDot} style={{ marginRight: 4 }} />{u.commune} — {u.quartier}</div>
               <div style={{ marginTop: 6 }}>
                 <span style={{
                   fontSize: 10, fontWeight: 700, padding: "3px 10px", borderRadius: 20,
@@ -237,7 +243,7 @@ export default function Admin({ onglet }) {
                   color: u.role === "collecteur" ? "#d97706" : "#3b82f6",
                   border: `1px solid ${u.role === "collecteur" ? "#fde68a" : "#bfdbfe"}`
                 }}>
-                  {u.role === "collecteur" ? "🚛 Collecteur" : "🏠 Ménage"}
+                  {u.role === "collecteur" ? <><FontAwesomeIcon icon={faTruck} style={{ marginRight: 5 }} />Collecteur</> : <><FontAwesomeIcon icon={faHouse} style={{ marginRight: 5 }} />Ménage</>}
                 </span>
               </div>
             </div>
@@ -247,7 +253,7 @@ export default function Admin({ onglet }) {
                 background: u.bloque ? "#f0fdf4" : "#fef2f2",
                 color: u.bloque ? "#16a34a" : "#ef4444"
               }}>
-                {u.bloque ? "✅ Débloquer" : "🚫 Bloquer"}
+                {u.bloque ? <><FontAwesomeIcon icon={faUnlock} style={{ marginRight: 5 }} />Débloquer</> : <><FontAwesomeIcon icon={faBan} style={{ marginRight: 5 }} />Bloquer</>}
               </button>
             )}
           </div>

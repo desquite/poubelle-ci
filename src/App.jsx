@@ -7,6 +7,12 @@ import Collecteur from "./pages/Collecteur";
 import Inscription from "./pages/Inscription";
 import Connexion from "./pages/Connexion";
 import Admin from "./pages/Admin";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+  faTrash, faLocationDot, faClock, faMap, faTriangleExclamation, faXmark,
+  faTruck, faHouse, faBox, faChartBar, faUsers, faClipboardList,
+  faLock, faUserPlus, faMobileScreen, faGlobe, faCircleCheck, faChevronRight
+} from "@fortawesome/free-solid-svg-icons";
 
 const nomAffiche = (nom) => nom?.trim().split(/\s+/).pop() || nom || "";
 
@@ -80,21 +86,21 @@ function SignalementsPublics({ onInscription }) {
           color: filtreUrgent ? "#ef4444" : "#64748b",
           boxShadow: "0 1px 3px rgba(0,0,0,0.06)"
         }}>
-          🔴 Urgent
+          <FontAwesomeIcon icon={faTriangleExclamation} style={{ marginRight: 5 }} />Urgent
         </button>
 
         {(filtreCommune || filtreUrgent) && (
           <button onClick={() => { setFiltreCommune(""); setFiltreUrgent(false); }} style={{
             padding: "9px 12px", borderRadius: 12, border: "1.5px solid #e2e8f0",
             background: "white", color: "#64748b", fontSize: 12, fontWeight: 600, cursor: "pointer"
-          }}>✕</button>
+          }}><FontAwesomeIcon icon={faXmark} /></button>
         )}
       </div>
 
       {/* Cartes */}
       {filtres.length === 0 && (
         <div style={{ textAlign: "center", padding: "40px 20px", color: "#94a3b8", fontSize: 13 }}>
-          <div style={{ fontSize: 40, marginBottom: 8 }}>🗑️</div>
+          <div style={{ fontSize: 40, marginBottom: 8 }}><FontAwesomeIcon icon={faTrash} /></div>
           Aucun signalement pour ce filtre
         </div>
       )}
@@ -119,7 +125,7 @@ function SignalementsPublics({ onInscription }) {
                   alignItems: "center", justifyContent: "center", gap: 4,
                   background: "linear-gradient(135deg, #f0fdf4, #dcfce7)"
                 }}>
-                  <span style={{ fontSize: 30 }}>🗑️</span>
+                  <span style={{ fontSize: 30, color: "#86efac" }}><FontAwesomeIcon icon={faTrash} /></span>
                   <span style={{ fontSize: 9, color: "#86efac", fontWeight: 600 }}>Pas de photo</span>
                 </div>
               )}
@@ -137,15 +143,15 @@ function SignalementsPublics({ onInscription }) {
             <div style={{ flex: 1, padding: "12px 14px", display: "flex", flexDirection: "column", gap: 5 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                 <div style={{ fontSize: 15, fontWeight: 800, color: "#0f172a" }}>{nomAffiche(s.nom)}</div>
-                <div style={{ fontSize: 10, color: "#94a3b8", whiteSpace: "nowrap", marginLeft: 8 }}>🕐 {timeAgo(s.createdAt)}</div>
+                <div style={{ fontSize: 10, color: "#94a3b8", whiteSpace: "nowrap", marginLeft: 8 }}><FontAwesomeIcon icon={faClock} style={{ marginRight: 3 }} />{timeAgo(s.createdAt)}</div>
               </div>
 
               <div style={{ fontSize: 12, color: "#16a34a", fontWeight: 700 }}>
-                📍 {s.commune} <span style={{ color: "#94a3b8", fontWeight: 400 }}>— {s.quartier}</span>
+                <FontAwesomeIcon icon={faLocationDot} style={{ marginRight: 4 }} />{s.commune} <span style={{ color: "#94a3b8", fontWeight: 400 }}>— {s.quartier}</span>
               </div>
 
               <div style={{ fontSize: 11, color: "#475569" }}>
-                🗑️ {s.type}
+                <FontAwesomeIcon icon={faTrash} style={{ marginRight: 4 }} />{s.type}
               </div>
 
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 2 }}>
@@ -161,7 +167,7 @@ function SignalementsPublics({ onInscription }) {
                     <span style={{
                       background: "#eff6ff", color: "#3b82f6", border: "1px solid #bfdbfe",
                       fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 20
-                    }}>🗺️ GPS</span>
+                    }}><FontAwesomeIcon icon={faMap} style={{ marginRight: 4 }} />GPS</span>
                   </a>
                 )}
               </div>
@@ -176,7 +182,7 @@ function SignalementsPublics({ onInscription }) {
         background: "linear-gradient(135deg, #14532d, #166534)",
         boxShadow: "0 4px 20px rgba(20,83,45,0.3)"
       }}>
-        <div style={{ fontSize: 24, marginBottom: 6 }}>🚛</div>
+        <div style={{ fontSize: 24, marginBottom: 6, color: "#86efac" }}><FontAwesomeIcon icon={faTruck} /></div>
         <p style={{ color: "#86efac", fontSize: 13, fontWeight: 600, margin: "0 0 12px" }}>
           Vous êtes collecteur ? Rejoignez la plateforme !
         </p>
@@ -249,7 +255,7 @@ export default function App() {
             display: "flex", justifyContent: "space-between", alignItems: "center",
             borderRadius: 10, margin: "10px 0"
           }}>
-            <span style={{ fontSize: 13, fontWeight: 700, color: "#14532d" }}>📲 Installer l'app sur votre téléphone</span>
+            <span style={{ fontSize: 13, fontWeight: 700, color: "#14532d" }}><FontAwesomeIcon icon={faMobileScreen} style={{ marginRight: 6 }} />Installer l'app sur votre téléphone</span>
             <button onClick={handleInstall} style={{
               background: "#14532d", color: "#a3e635", border: "none",
               borderRadius: 8, padding: "6px 14px", fontWeight: 800, cursor: "pointer", fontSize: 12
@@ -264,7 +270,7 @@ export default function App() {
               background: "linear-gradient(135deg, #a3e635, #4ade80)",
               display: "flex", alignItems: "center", justifyContent: "center",
               fontSize: 18, boxShadow: "0 2px 8px rgba(163,230,53,0.4)"
-            }}>🗑️</div>
+            }}><FontAwesomeIcon icon={faTrash} style={{ color: "#14532d" }} /></div>
             <div>
               <div style={{ fontSize: 18, fontWeight: 900, color: "#a3e635", letterSpacing: -0.5 }}>Poubelle-CI</div>
               <div style={{ fontSize: 10, color: "#4ade80", fontWeight: 500 }}>Collecte propre, ville propre</div>
@@ -284,7 +290,7 @@ export default function App() {
             </div>
           ) : (
             <div style={{ fontSize: 10, color: "#4ade80", fontWeight: 600 }}>
-              🌍 Abidjan, CI
+              <FontAwesomeIcon icon={faGlobe} style={{ marginRight: 4 }} />Abidjan, CI
             </div>
           )}
         </div>
@@ -295,15 +301,15 @@ export default function App() {
             borderRadius: "14px 14px 0 0", padding: "4px 4px 0", gap: 4
           }}>
             {(utilisateur?.role === "admin" ? [
-              { key: "dashboard", label: "📊 Dashboard", desc: "Vue globale" },
-              { key: "signalements", label: "📦 Signalements", desc: "Tous" },
-              { key: "utilisateurs", label: "👥 Utilisateurs", desc: "Gérer" },
+              { key: "dashboard", icon: faChartBar, label: "Dashboard", desc: "Vue globale" },
+              { key: "signalements", icon: faBox, label: "Signalements", desc: "Tous" },
+              { key: "utilisateurs", icon: faUsers, label: "Utilisateurs", desc: "Gérer" },
             ] : utilisateur?.role === "menage" ? [
-              { key: "menage", label: "🏠 Signaler", desc: "Nouveau" },
-              { key: "mescollectes", label: "📋 Historique", desc: "Mes signalements" },
+              { key: "menage", icon: faHouse, label: "Signaler", desc: "Nouveau" },
+              { key: "mescollectes", icon: faClipboardList, label: "Historique", desc: "Mes signalements" },
             ] : [
-              { key: "disponibles", label: "📦 Disponibles", desc: "À collecter" },
-              { key: "mescollectes", label: "🚛 Mes collectes", desc: "Historique" },
+              { key: "disponibles", icon: faBox, label: "Disponibles", desc: "À collecter" },
+              { key: "mescollectes", icon: faTruck, label: "Mes collectes", desc: "Historique" },
             ]).map(tab => (
               <button key={tab.key} onClick={() => setMode(tab.key)} style={{
                 flex: 1, padding: "10px 8px 12px", borderRadius: "12px 12px 0 0",
@@ -312,7 +318,7 @@ export default function App() {
                 color: mode === tab.key ? "#14532d" : "rgba(255,255,255,0.6)",
                 fontWeight: 800, fontSize: 12, transition: "all 0.2s"
               }}>
-                {tab.label}
+                <FontAwesomeIcon icon={tab.icon} style={{ marginRight: 5 }} />{tab.label}
                 <div style={{ fontSize: 9, opacity: 0.7, marginTop: 1 }}>{tab.desc}</div>
               </button>
             ))}
@@ -345,8 +351,8 @@ export default function App() {
           width: 72, height: 72, borderRadius: 20, margin: "0 auto 16px",
           background: "rgba(163,230,53,0.15)", display: "flex",
           alignItems: "center", justifyContent: "center", fontSize: 36,
-          border: "2px solid rgba(163,230,53,0.3)"
-        }}>🗑️</div>
+          border: "2px solid rgba(163,230,53,0.3)", color: "#a3e635"
+        }}><FontAwesomeIcon icon={faTrash} /></div>
 
         <h2 style={{ color: "white", fontSize: 22, fontWeight: 900, margin: "0 0 8px", letterSpacing: -0.5 }}>
           Signaler, c'est agir pour<br />
@@ -364,7 +370,7 @@ export default function App() {
             fontSize: 13, fontWeight: 800, cursor: "pointer",
             boxShadow: "0 4px 16px rgba(163,230,53,0.4)"
           }}>
-            📝 Créer un compte
+            <FontAwesomeIcon icon={faUserPlus} style={{ marginRight: 6 }} />Créer un compte
           </button>
           <button onClick={() => setEcran("connexion")} style={{
             flex: 1, padding: "14px 12px",
@@ -372,7 +378,7 @@ export default function App() {
             color: "white", border: "1.5px solid rgba(255,255,255,0.25)",
             borderRadius: 14, fontSize: 13, fontWeight: 700, cursor: "pointer"
           }}>
-            🔐 Se connecter
+            <FontAwesomeIcon icon={faLock} style={{ marginRight: 6 }} />Se connecter
           </button>
         </div>
       </div>
