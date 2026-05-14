@@ -33,8 +33,8 @@ export default async function handler(req, res) {
 
     const message = `🗑️ *Nouveau signalement - Poubelle-CI*\n\n📍 *${commune} — ${quartier}*\n👤 ${nom}\n🗑️ ${type} · ${volume}${urgent ? "\n🔴 URGENT !" : ""}${lat ? `\n\n🗺️ Localisation : https://www.google.com/maps?q=${lat},${lng}` : ""}\n\n👉 Connectez-vous pour accepter !\npoubelle-ci.vercel.app`;
 
-    const WASENDER_KEY = process.env.WASENDER_API_KEY;
-    const SESSION_ID = process.env.WASENDER_SESSION_ID;
+    const WASENDER_KEY = process.env.WASENDER_API_KEY || process.env.VITE_WASENDER_API_KEY;
+    const SESSION_ID = process.env.WASENDER_SESSION_ID || process.env.VITE_WASENDER_SESSION_ID;
 
     const envois = collecteurs.map(async collecteur => {
       const r = await fetch("https://wasenderapi.com/api/send-message", {
