@@ -54,18 +54,24 @@ export default function Collecteur({ utilisateur, mode }) {
 
   const notifierMenage = async (menageTelephone) => {
     const message = `✅ *Votre signalement a été accepté !*\n\n🚛 *Collecteur :* ${nomAffiche(utilisateur.nom)}\n📞 *Téléphone :* +${utilisateur.uid}\n\nIl arrive bientôt. Merci de faire confiance à Poubelle-CI ! 🗑️`;
-    await fetch("https://wasenderapi.com/api/send-message", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${import.meta.env.VITE_WASENDER_API_KEY}`
-      },
-      body: JSON.stringify({
-        sessionId: import.meta.env.VITE_WASENDER_SESSION_ID,
-        to: menageTelephone,
-        text: message
-      })
-    });
+    try {
+      const r = await fetch("https://wasenderapi.com/api/send-message", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${import.meta.env.VITE_WASENDER_API_KEY}`
+        },
+        body: JSON.stringify({
+          sessionId: import.meta.env.VITE_WASENDER_SESSION_ID,
+          to: menageTelephone,
+          text: message
+        })
+      });
+      const data = await r.json();
+      console.log("WaSender réponse:", r.status, data);
+    } catch (e) {
+      console.error("WaSender erreur:", e.message);
+    }
   };
 
   const accepter = async (id, signalement) => {
