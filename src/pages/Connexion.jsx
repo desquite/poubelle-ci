@@ -19,7 +19,7 @@ const envoyerWhatsApp = async (numero, code) => {
     body: JSON.stringify({
       sessionId: SESSION_ID,
       to: "225" + numero.replace(/\s/g, ""),
-      text: `🗑️ *Poubelle-CI*\n\nVotre code de connexion est : *${code}*\n\nCe code expire dans 5 minutes.`
+      text: `*${code}* est votre code de connexion Poubelle-CI.\n\nCe code expire dans 5 minutes. Ne le partagez pas.`
     })
   });
   return response.ok;
