@@ -67,8 +67,20 @@ export default function Collecteur({ utilisateur, mode }) {
     if (signalement.uid) await notifierMenage(signalement.uid);
   };
 
-  const terminer = async (id) => {
+  const terminer = async (id, signalement) => {
     await updateDoc(doc(db, "signalements", id), { status: "collecté" });
+    if (signalement.uid) {
+      const message = `✅ *Votre poubelle a été collectée !*\n\n🚛 *Collecteur :* ${nomAffiche(utilisateur.nom)}\n📍 ${signalement.commune} — ${signalement.quartier}\n\nMerci d'utiliser Poubelle-CI ! 🌍\npoubelle-ci.vercel.app`;
+      try {
+        await fetch("https://wasenderapi.com/api/send-message", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${import.meta.env.VITE_WASENDER_API_KEY}` },
+          body: JSON.stringify({ sessionId: import.meta.env.VITE_WASENDER_SESSION_ID, to: signalement.uid, text: message })
+        });
+      } catch (e) {
+        console.error("WaSender erreur:", e.message);
+      }
+    }
   };
 
   const communesDisponibles = [...new Set(disponibles.map(s => s.commune).filter(Boolean))].sort();
@@ -236,7 +248,7 @@ export default function Collecteur({ utilisateur, mode }) {
           {mesCollectes.map(s => (
             <Carte key={s.id} s={s} actions={
               s.status === "en cours" ? (
-                <button onClick={() => terminer(s.id)} style={{
+                <button onClick={() => terminer(s.id, s)} style={{
                   width: "100%", padding: "11px", cursor: "pointer", fontWeight: 800, fontSize: 13,
                   background: "linear-gradient(135deg, #0f2d0f, #166534)", color: "white",
                   border: "none", borderRadius: 12, boxShadow: "0 3px 10px rgba(15,45,15,0.3)"
