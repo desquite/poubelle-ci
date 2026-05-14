@@ -5,6 +5,8 @@ import { collection, onSnapshot, doc, updateDoc, query, where } from "firebase/f
 import { db } from "../firebase/config";
 
 
+const nomAffiche = (nom) => nom?.trim().split(/\s+/).pop() || nom || "";
+
 const timeAgo = (timestamp) => {
   if (!timestamp?.seconds) return "";
   const now = Date.now();
@@ -90,9 +92,10 @@ export default function Collecteur({ utilisateur, mode }) {
               {s.urgent && <span style={{ background: "#fee2e2", color: "#ef4444", fontSize: 10, fontWeight: 800, padding: "2px 8px", borderRadius: 10 }}>🔴 URGENT</span>}
               <span style={{ background: sc.bg, color: sc.text, fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 10 }}>{s.status}</span>
             </div>
-            <div style={{ fontWeight: 700, fontSize: 13, color: "#1a2e1a" }}>{s.nom}</div>
+            <div style={{ fontWeight: 700, fontSize: 13, color: "#1a2e1a" }}>{nomAffiche(s.nom)}</div>
             <div style={{ fontSize: 12, color: "#6b9e5a" }}>📍 {s.commune} — {s.quartier}</div>
             <div style={{ fontSize: 12, color: "#4a6b3a" }}>🗑️ {s.type} · {s.volume}</div>
+            {s.uid && <div style={{ fontSize: 12, color: "#2e7d32", fontWeight: 600 }}>📞 +{s.uid}</div>}
             {s.lat && (
               <a href={`https://www.google.com/maps?q=${s.lat},${s.lng}`} target="_blank" rel="noreferrer"
                 style={{ fontSize: 11, color: "#4caf50", textDecoration: "none" }}>

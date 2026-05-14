@@ -11,6 +11,8 @@ import Connexion from "./pages/Connexion";
 
 
 
+const nomAffiche = (nom) => nom?.trim().split(/\s+/).pop() || nom || "";
+
 const timeAgo = (timestamp) => {
   if (!timestamp?.seconds) return "";
   const now = Date.now();
@@ -110,7 +112,7 @@ function SignalementsPublics() {
                 {s.urgent && <span style={{ background: "#fee2e2", color: "#ef4444", fontSize: 10, fontWeight: 800, padding: "1px 7px", borderRadius: 10 }}>🔴 URGENT</span>}
                 <span style={{ background: "#dcfce7", color: "#15803d", fontSize: 10, fontWeight: 700, padding: "1px 7px", borderRadius: 10 }}>disponible</span>
               </div>
-              <div style={{ fontWeight: 700, fontSize: 13, color: "#1a2e1a" }}>{s.nom}</div>
+              <div style={{ fontWeight: 700, fontSize: 13, color: "#1a2e1a" }}>{nomAffiche(s.nom)}</div>
               <div style={{ fontSize: 11, color: "#6b9e5a" }}>📍 {s.commune} — {s.quartier}</div>
               <div style={{ fontSize: 11, color: "#4a6b3a" }}>🗑️ {s.type} · {s.volume}</div>
               <div style={{ fontSize: 10, color: "#94a3b8" }}>🕐 {timeAgo(s.createdAt)}</div>
