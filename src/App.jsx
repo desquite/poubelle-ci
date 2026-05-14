@@ -6,6 +6,7 @@ import Menage from "./pages/Menage";
 import Collecteur from "./pages/Collecteur";
 import Inscription from "./pages/Inscription";
 import Connexion from "./pages/Connexion";
+import Admin from "./pages/Admin";
 
 const nomAffiche = (nom) => nom?.trim().split(/\s+/).pop() || nom || "";
 
@@ -191,7 +192,7 @@ function SignalementsPublics({ onInscription }) {
 }
 
 export default function App() {
-  const [mode, setMode] = useState("menage");
+  const [mode, setMode] = useState("dashboard");
   const [ecran, setEcran] = useState("accueil");
   const [utilisateur, setUtilisateur] = useState(null);
   const [installPrompt, setInstallPrompt] = useState(null);
@@ -210,7 +211,7 @@ export default function App() {
         if (snap.exists()) {
           const userData = { uid: user.uid, ...snap.data() };
           setUtilisateur(userData);
-          setMode(userData.role === "menage" ? "menage" : "disponibles");
+          setMode(userData.role === "admin" ? "dashboard" : userData.role === "menage" ? "menage" : "disponibles");
           setEcran("app");
         }
       }
@@ -293,7 +294,11 @@ export default function App() {
             display: "flex", background: "rgba(0,0,0,0.25)",
             borderRadius: "14px 14px 0 0", padding: "4px 4px 0", gap: 4
           }}>
-            {(utilisateur?.role === "menage" ? [
+            {(utilisateur?.role === "admin" ? [
+              { key: "dashboard", label: "📊 Dashboard", desc: "Vue globale" },
+              { key: "signalements", label: "📦 Signalements", desc: "Tous" },
+              { key: "utilisateurs", label: "👥 Utilisateurs", desc: "Gérer" },
+            ] : utilisateur?.role === "menage" ? [
               { key: "menage", label: "🏠 Signaler", desc: "Nouveau" },
               { key: "mescollectes", label: "📋 Historique", desc: "Mes signalements" },
             ] : [
@@ -422,7 +427,9 @@ export default function App() {
     <div style={{ minHeight: "100vh", background: "#f8fafc", fontFamily: "sans-serif" }}>
       <Header />
       <div style={{ maxWidth: 440, margin: "0 auto", paddingBottom: 40 }}>
-        {utilisateur?.role === "menage" ? (
+        {utilisateur?.role === "admin" ? (
+          <Admin onglet={mode} />
+        ) : utilisateur?.role === "menage" ? (
           <Menage utilisateur={utilisateur} mode={mode} />
         ) : (
           <Collecteur utilisateur={utilisateur} mode={mode} />
