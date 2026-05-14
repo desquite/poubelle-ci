@@ -36,8 +36,8 @@ export default async function handler(req, res) {
     const WASENDER_KEY = process.env.WASENDER_API_KEY || process.env.VITE_WASENDER_API_KEY;
     const SESSION_ID = process.env.WASENDER_SESSION_ID || process.env.VITE_WASENDER_SESSION_ID;
 
-    const envois = collecteurs.map(async collecteur => {
-      const r = await fetch("https://wasenderapi.com/api/send-message", {
+    const envois = collecteurs.map(collecteur =>
+      fetch("https://wasenderapi.com/api/send-message", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -48,13 +48,12 @@ export default async function handler(req, res) {
           to: collecteur.telephone,
           text: message
         })
-      });
-      return { telephone: collecteur.telephone, status: r.status, body: await r.json() };
-    });
+      })
+    );
 
-    const resultats = await Promise.all(envois);
+    await Promise.all(envois);
 
-    return res.status(200).json({ success: true, notifies: collecteurs.length, resultats });
+    return res.status(200).json({ success: true, notifies: collecteurs.length });
 
   } catch (e) {
     return res.status(500).json({ error: e.message });
