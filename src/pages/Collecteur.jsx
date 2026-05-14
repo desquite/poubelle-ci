@@ -67,8 +67,6 @@ export default function Collecteur({ utilisateur, mode }) {
           text: message
         })
       });
-      const data = await r.json();
-      console.log("WaSender réponse:", r.status, data);
     } catch (e) {
       console.error("WaSender erreur:", e.message);
     }
