@@ -52,12 +52,29 @@ export default function Collecteur({ utilisateur, mode }) {
     return () => unsub();
   }, [utilisateur]);
 
-  const accepter = async (id) => {
+  const notifierMenage = async (menageTelephone) => {
+    const message = `✅ *Votre signalement a été accepté !*\n\n🚛 *Collecteur :* ${nomAffiche(utilisateur.nom)}\n📞 *Téléphone :* +${utilisateur.uid}\n\nIl arrive bientôt. Merci de faire confiance à Poubelle-CI ! 🗑️`;
+    await fetch("https://wasenderapi.com/api/send-message", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${import.meta.env.VITE_WASENDER_API_KEY}`
+      },
+      body: JSON.stringify({
+        sessionId: import.meta.env.VITE_WASENDER_SESSION_ID,
+        to: menageTelephone,
+        text: message
+      })
+    });
+  };
+
+  const accepter = async (id, signalement) => {
     await updateDoc(doc(db, "signalements", id), {
       status: "en cours",
       collecteurId: utilisateur.uid,
       collecteurNom: utilisateur.nom
     });
+    if (signalement.uid) await notifierMenage(signalement.uid);
   };
 
   const terminer = async (id) => {
@@ -178,7 +195,7 @@ export default function Collecteur({ utilisateur, mode }) {
             <CarteSignalement key={s.id} s={s} actions={
                         <button onClick={() => {
               if (window.confirm("Voulez-vous accepter cette collecte ?\n\n📍 " + s.commune + " — " + s.quartier + "\n🗑️ " + s.type + " · " + s.volume)) {
-                accepter(s.id);
+                accepter(s.id, s);
               }
             }} style={{
               width: "100%", padding: "10px", background: "#4caf50", color: "white",
