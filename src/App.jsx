@@ -11,7 +11,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faTrash, faLocationDot, faClock, faMap, faTriangleExclamation, faXmark,
   faTruck, faHouse, faBox, faChartBar, faUsers, faClipboardList,
-  faLock, faUserPlus, faMobileScreen, faGlobe, faCircleCheck, faChevronRight
+  faLock, faUserPlus, faMobileScreen, faGlobe, faCircleCheck, faChevronRight, faArrowLeft
 } from "@fortawesome/free-solid-svg-icons";
 
 const nomAffiche = (nom) => nom?.trim().split(/\s+/).pop() || nom || "";
@@ -288,6 +288,15 @@ export default function App() {
                 border: "none", cursor: "pointer", padding: 0
               }}>Déconnexion</button>
             </div>
+          ) : (ecran === "inscription" || ecran === "connexion") ? (
+            <button onClick={() => setEcran("accueil")} style={{
+              display: "flex", alignItems: "center", gap: 6,
+              background: "rgba(255,255,255,0.12)", border: "1.5px solid rgba(255,255,255,0.2)",
+              borderRadius: 10, padding: "8px 14px", color: "white",
+              fontSize: 13, fontWeight: 700, cursor: "pointer"
+            }}>
+              <FontAwesomeIcon icon={faArrowLeft} />
+            </button>
           ) : (
             <div style={{ fontSize: 10, color: "#4ade80", fontWeight: 600 }}>
               <FontAwesomeIcon icon={faGlobe} style={{ marginRight: 4 }} />Abidjan, CI
