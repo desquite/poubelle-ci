@@ -5,6 +5,7 @@ import { doc, getDoc } from "firebase/firestore";
 import { db } from "../firebase/config";
 
 const WASENDER_KEY = import.meta.env.VITE_WASENDER_API_KEY;
+const SESSION_ID = import.meta.env.VITE_WASENDER_SESSION_ID;
 
 const genererCode = () => Math.floor(100000 + Math.random() * 900000).toString();
 
@@ -16,7 +17,7 @@ const envoyerWhatsApp = async (numero, code) => {
       "Authorization": `Bearer ${WASENDER_KEY}`
     },
     body: JSON.stringify({
-      sessionId: "42536",
+      sessionId: SESSION_ID,
       to: "225" + numero.replace(/\s/g, ""),
       text: `🗑️ *Poubelle-CI*\n\nVotre code de connexion est : *${code}*\n\nCe code expire dans 5 minutes.`
     })
