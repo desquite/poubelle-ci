@@ -66,10 +66,11 @@ export default function SuiviCollecte({ signalement, onClose }) {
 
       {/* Carte */}
       <div style={{ flex: 1, position: "relative", zIndex: 0 }}>
-        <MapContainer center={[poubelle.lat, poubelle.lng]} zoom={15} style={{ height: "100%", width: "100%" }}>
+        <MapContainer center={[poubelle.lat, poubelle.lng]} zoom={15} maxZoom={21} style={{ height: "100%", width: "100%" }}>
           <TileLayer
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+            maxZoom={21} maxNativeZoom={19}
           />
           <CadrerCarte points={points} />
 

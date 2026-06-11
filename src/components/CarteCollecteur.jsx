@@ -28,6 +28,35 @@ function Recentrer({ centre }) {
   return null;
 }
 
+// Écarte en cercle les signalements situés au même endroit (~10 m),
+// sinon les marqueurs s'empilent et seul celui du dessus est cliquable.
+// lat/lng restent les vraies coordonnées ; posLat/posLng servent à l'affichage.
+const eclaterPositions = (signalements) => {
+  const groupes = {};
+  signalements.forEach(s => {
+    const cle = `${s.lat.toFixed(4)}_${s.lng.toFixed(4)}`;
+    (groupes[cle] = groupes[cle] || []).push(s);
+  });
+  const resultat = [];
+  Object.values(groupes).forEach(groupe => {
+    if (groupe.length === 1) {
+      const s = groupe[0];
+      resultat.push({ ...s, posLat: s.lat, posLng: s.lng });
+      return;
+    }
+    const rayon = 0.00018; // ≈ 20 m
+    groupe.forEach((s, i) => {
+      const angle = (2 * Math.PI * i) / groupe.length;
+      resultat.push({
+        ...s,
+        posLat: s.lat + rayon * Math.sin(angle),
+        posLng: s.lng + (rayon * Math.cos(angle)) / Math.cos((s.lat * Math.PI) / 180),
+      });
+    });
+  });
+  return resultat;
+};
+
 export default function CarteCollecteur({ signalements, corbeilleIds, onAjouter, onRetirer, nbCorbeille, onVoirCorbeille }) {
   const [maPosition, setMaPosition] = useState(null);
   const [gpsErreur, setGpsErreur] = useState(() => !("geolocation" in navigator));
@@ -50,7 +79,7 @@ export default function CarteCollecteur({ signalements, corbeilleIds, onAjouter,
   useEffect(() => { localStorage.setItem("rayonKm", rayon); }, [rayon]);
 
   const centre = commune ? COMMUNES_COORDS[commune] : (maPosition || ABIDJAN_CENTER);
-  const avecGps = signalements.filter(s => s.lat && s.lng);
+  const avecGps = eclaterPositions(signalements.filter(s => s.lat && s.lng));
   const nbDansRayon = avecGps.filter(s => distanceKm(centre.lat, centre.lng, s.lat, s.lng) <= rayon).length;
 
   return (
@@ -101,11 +130,12 @@ export default function CarteCollecteur({ signalements, corbeilleIds, onAjouter,
 
       {/* Carte */}
       <div style={{ position: "relative", zIndex: 0, borderRadius: 16, overflow: "hidden", boxShadow: "0 2px 12px rgba(0,0,0,0.1)" }}>
-        <MapContainer center={[centre.lat, centre.lng]} zoom={14}
+        <MapContainer center={[centre.lat, centre.lng]} zoom={14} maxZoom={21}
           style={{ height: "calc(100dvh - 330px)", minHeight: 380, width: "100%" }}>
           <TileLayer
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+            maxZoom={21} maxNativeZoom={19}
           />
           <Recentrer centre={centre} />
 
@@ -126,7 +156,7 @@ export default function CarteCollecteur({ signalements, corbeilleIds, onAjouter,
             const dans = d <= rayon;
             const enCorbeille = corbeilleIds.has(s.id);
             return (
-              <Marker key={s.id} position={[s.lat, s.lng]}
+              <Marker key={s.id} position={[s.posLat, s.posLng]}
                 icon={enCorbeille ? iconPoubelleCorbeille : s.urgent ? iconPoubelleUrgente : iconPoubelle}
                 opacity={dans ? 1 : 0.35}>
                 <Popup>
