@@ -11,7 +11,8 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faTrash, faLocationDot, faClock, faMap, faTriangleExclamation, faXmark,
   faTruck, faHouse, faBox, faChartBar, faUsers, faClipboardList,
-  faLock, faUserPlus, faMobileScreen, faGlobe, faCircleCheck, faChevronRight, faArrowLeft
+  faLock, faUserPlus, faMobileScreen, faGlobe, faCircleCheck, faChevronRight, faArrowLeft,
+  faBasketShopping
 } from "@fortawesome/free-solid-svg-icons";
 
 const nomAffiche = (nom) => nom?.trim().split(/\s+/).pop() || nom || "";
@@ -217,7 +218,7 @@ export default function App() {
         if (snap.exists()) {
           const userData = { uid: user.uid, ...snap.data() };
           setUtilisateur(userData);
-          setMode(userData.role === "admin" ? "dashboard" : userData.role === "menage" ? "menage" : "disponibles");
+          setMode(userData.role === "admin" ? "dashboard" : userData.role === "menage" ? "menage" : "carte");
           setEcran("app");
         }
       }
@@ -317,8 +318,9 @@ export default function App() {
               { key: "menage", icon: faHouse, label: "Signaler", desc: "Nouveau" },
               { key: "mescollectes", icon: faClipboardList, label: "Historique", desc: "Mes signalements" },
             ] : [
-              { key: "disponibles", icon: faBox, label: "Disponibles", desc: "À collecter" },
-              { key: "mescollectes", icon: faTruck, label: "Mes collectes", desc: "Historique" },
+              { key: "carte", icon: faMap, label: "Carte", desc: "Autour de moi" },
+              { key: "corbeille", icon: faBasketShopping, label: "Corbeille", desc: "Brouillons" },
+              { key: "mescollectes", icon: faTruck, label: "Collectes", desc: "Historique" },
             ]).map(tab => (
               <button key={tab.key} onClick={() => setMode(tab.key)} style={{
                 flex: 1, padding: "10px 8px 12px", borderRadius: "12px 12px 0 0",
@@ -409,7 +411,7 @@ export default function App() {
       <Header />
       <Inscription onInscrit={(user) => {
         setUtilisateur(user);
-        setMode(user.role === "menage" ? "menage" : "disponibles");
+        setMode(user.role === "menage" ? "menage" : "carte");
         setEcran("app");
       }} />
       <div style={{ textAlign: "center", padding: 16 }}>
@@ -426,7 +428,7 @@ export default function App() {
       <Header />
       <Connexion onConnecte={(user) => {
         setUtilisateur(user);
-        setMode(user.role === "menage" ? "menage" : "disponibles");
+        setMode(user.role === "menage" ? "menage" : "carte");
         setEcran("app");
       }} />
       <div style={{ textAlign: "center", padding: 16 }}>
@@ -447,7 +449,7 @@ export default function App() {
         ) : utilisateur?.role === "menage" ? (
           <Menage utilisateur={utilisateur} mode={mode} />
         ) : (
-          <Collecteur utilisateur={utilisateur} mode={mode} />
+          <Collecteur utilisateur={utilisateur} mode={mode} onChangeMode={setMode} />
         )}
       </div>
     </div>

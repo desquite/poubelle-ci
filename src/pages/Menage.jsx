@@ -2,11 +2,12 @@ import { useState, useEffect } from "react";
 import { collection, addDoc, serverTimestamp, query, where, onSnapshot, deleteDoc, doc } from "firebase/firestore";
 import { db } from "../firebase/config";
 import { COMMUNES_QUARTIERS, COMMUNES } from "../quartiers";
+import SuiviCollecte from "../components/SuiviCollecte";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faTrash, faLocationDot, faClock, faMap, faTriangleExclamation,
   faBox, faCheck, faClipboardList, faSatelliteDish, faCamera,
-  faArrowLeft, faPlus, faCircleCheck
+  faArrowLeft, faPlus, faCircleCheck, faTruck
 } from "@fortawesome/free-solid-svg-icons";
 
 const WASTE_TYPES = ["Ordures ménagères", "Encombrants", "Déchets recyclables", "Déchets organiques"];
@@ -53,6 +54,7 @@ export default function Menage({ utilisateur, mode }) {
   const [photoUploading, setPhotoUploading] = useState(false);
   const [loading, setLoading] = useState(false);
   const [mesSignalements, setMesSignalements] = useState([]);
+  const [suiviId, setSuiviId] = useState(null);
 
   useEffect(() => {
     if (!utilisateur?.uid) return;
@@ -95,7 +97,7 @@ export default function Menage({ utilisateur, mode }) {
   };
 
   const handleSubmit = async () => {
-    if (!form.commune || !form.quartier || !form.type || !form.volume) return;
+    if (!form.commune || !form.quartier || !form.type || !form.volume || !form.lat) return;
     setLoading(true);
     try {
       await addDoc(collection(db, "signalements"), { ...form, uid: utilisateur.uid, status: "disponible", createdAt: serverTimestamp() });
@@ -114,8 +116,14 @@ export default function Menage({ utilisateur, mode }) {
   };
 
   // ── Vue Historique ──
+  const signalementSuivi = suiviId ? mesSignalements.find(s => s.id === suiviId) : null;
+
   if (mode === "mescollectes") return (
     <div style={{ padding: "16px", maxWidth: 440, margin: "0 auto" }}>
+
+      {signalementSuivi && (
+        <SuiviCollecte signalement={signalementSuivi} onClose={() => setSuiviId(null)} />
+      )}
 
       {/* Stats */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 20 }}>
@@ -175,7 +183,17 @@ export default function Menage({ utilisateur, mode }) {
               </div>
             </div>
 
-            {s.status !== "en cours" && (
+            {s.status === "en cours" && s.collecteurId && s.lat ? (
+              <div style={{ borderTop: "1px solid #f1f5f9", padding: "10px 14px" }}>
+                <button onClick={() => setSuiviId(s.id)} style={{
+                  width: "100%", padding: "11px", cursor: "pointer", fontWeight: 800, fontSize: 13,
+                  background: "linear-gradient(135deg, #16a34a, #15803d)", color: "white",
+                  border: "none", borderRadius: 12, boxShadow: "0 3px 10px rgba(22,163,74,0.3)"
+                }}>
+                  <FontAwesomeIcon icon={faTruck} style={{ marginRight: 6 }} />Suivre le collecteur sur la carte
+                </button>
+              </div>
+            ) : s.status !== "en cours" && (
               <div style={{ borderTop: "1px solid #f1f5f9", padding: "10px 14px" }}>
                 <button onClick={() => supprimerSignalement(s.id, s.status)} style={{
                   width: "100%", padding: "9px", background: "#fff5f5", color: "#ef4444",
@@ -267,24 +285,30 @@ export default function Menage({ utilisateur, mode }) {
           <input value={form.adresse} onChange={e => setForm({...form, adresse: e.target.value})} placeholder="Ex: Rue 12, près de la mosquée..." style={inp} />
 
           <button onClick={localiser} disabled={gpsLoading} style={{
-            width: "100%", padding: "12px", borderRadius: 12, cursor: "pointer", fontWeight: 700, fontSize: 13, marginBottom: 16,
+            width: "100%", padding: "12px", borderRadius: 12, cursor: "pointer", fontWeight: 700, fontSize: 13, marginBottom: 6,
             border: gpsOk ? "none" : "2px dashed #16a34a",
             background: gpsOk ? "linear-gradient(135deg, #f0fdf4, #dcfce7)" : "white",
             color: gpsOk ? "#16a34a" : "#16a34a",
             boxShadow: gpsOk ? "0 2px 8px rgba(22,163,74,0.15)" : "none"
           }}>
-            {gpsLoading ? <><FontAwesomeIcon icon={faSatelliteDish} style={{ marginRight: 6 }} />Localisation en cours...</> : gpsOk ? <><FontAwesomeIcon icon={faCheck} style={{ marginRight: 6 }} />Position GPS obtenue !</> : <><FontAwesomeIcon icon={faLocationDot} style={{ marginRight: 6 }} />Ajouter ma localisation GPS</>}
+            {gpsLoading ? <><FontAwesomeIcon icon={faSatelliteDish} style={{ marginRight: 6 }} />Localisation en cours...</> : gpsOk ? <><FontAwesomeIcon icon={faCheck} style={{ marginRight: 6 }} />Position GPS obtenue !</> : <><FontAwesomeIcon icon={faLocationDot} style={{ marginRight: 6 }} />Ma localisation GPS (obligatoire)</>}
           </button>
+          {!gpsOk && (
+            <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 16, textAlign: "center" }}>
+              La position GPS est obligatoire : elle permet au collecteur de trouver votre poubelle sur la carte.
+            </div>
+          )}
+          {gpsOk && <div style={{ marginBottom: 16 }} />}
 
           <div style={{ display: "flex", gap: 10 }}>
             <button onClick={() => setStep(0)} style={{ flex: 1, padding: "13px", background: "#f8fafc", color: "#64748b", border: "1.5px solid #e2e8f0", borderRadius: 12, fontWeight: 700, cursor: "pointer", fontSize: 13 }}>
               Annuler
             </button>
-            <button onClick={() => setStep(2)} disabled={!form.commune || !form.quartier} style={{
+            <button onClick={() => setStep(2)} disabled={!form.commune || !form.quartier || !gpsOk} style={{
               flex: 2, padding: "13px", borderRadius: 12, fontWeight: 800, cursor: "pointer", fontSize: 13, border: "none",
-              background: (!form.commune || !form.quartier) ? "#e2e8f0" : "linear-gradient(135deg, #16a34a, #15803d)",
-              color: (!form.commune || !form.quartier) ? "#94a3b8" : "white",
-              boxShadow: (!form.commune || !form.quartier) ? "none" : "0 3px 10px rgba(22,163,74,0.3)"
+              background: (!form.commune || !form.quartier || !gpsOk) ? "#e2e8f0" : "linear-gradient(135deg, #16a34a, #15803d)",
+              color: (!form.commune || !form.quartier || !gpsOk) ? "#94a3b8" : "white",
+              boxShadow: (!form.commune || !form.quartier || !gpsOk) ? "none" : "0 3px 10px rgba(22,163,74,0.3)"
             }}>
               Continuer →
             </button>

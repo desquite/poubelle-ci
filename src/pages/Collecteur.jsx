@@ -1,10 +1,11 @@
-import { useState, useEffect } from "react";
-import { collection, onSnapshot, doc, updateDoc, query, where } from "firebase/firestore";
+import { useState, useEffect, useMemo } from "react";
+import { collection, onSnapshot, doc, updateDoc, query, where, setDoc, deleteDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "../firebase/config";
+import CarteCollecteur from "../components/CarteCollecteur";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-  faTrash, faLocationDot, faClock, faMap, faTriangleExclamation, faXmark,
-  faTruck, faBox, faCheck, faPhone, faHandPointer, faComment
+  faTrash, faLocationDot, faClock, faMap, faXmark,
+  faTruck, faCheck, faPhone, faComment, faBasketShopping, faCircleCheck
 } from "@fortawesome/free-solid-svg-icons";
 
 const nomAffiche = (nom) => nom?.trim().split(/\s+/).pop() || nom || "";
@@ -25,12 +26,11 @@ const STATUS = {
   "collecté":   { bg: "#f8fafc", text: "#64748b", border: "#e2e8f0" },
 };
 
-export default function Collecteur({ utilisateur, mode }) {
+export default function Collecteur({ utilisateur, mode, onChangeMode }) {
   const [disponibles, setDisponibles] = useState([]);
   const [mesCollectes, setMesCollectes] = useState([]);
+  const [corbeille, setCorbeille] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [filtreCommune, setFiltreCommune] = useState("");
-  const [filtreUrgent, setFiltreUrgent] = useState(false);
 
   useEffect(() => {
     const q = query(collection(db, "signalements"), where("status", "==", "disponible"));
@@ -54,8 +54,59 @@ export default function Collecteur({ utilisateur, mode }) {
     return () => unsub();
   }, [utilisateur]);
 
+  // Ma corbeille (brouillons)
+  useEffect(() => {
+    if (!utilisateur?.uid) return;
+    const q = query(collection(db, "corbeilles"), where("collecteurId", "==", utilisateur.uid));
+    const unsub = onSnapshot(q, (snapshot) => {
+      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      data.sort((a, b) => (b.addedAt?.seconds || 0) - (a.addedAt?.seconds || 0));
+      setCorbeille(data);
+    });
+    return () => unsub();
+  }, [utilisateur]);
+
+  // Nettoyage auto : retire de la corbeille les signalements pris par un autre ou supprimés
+  useEffect(() => {
+    if (loading) return;
+    corbeille
+      .filter(e => !disponibles.some(s => s.id === e.signalementId))
+      .forEach(e => deleteDoc(doc(db, "corbeilles", e.id)).catch(() => {}));
+  }, [loading, disponibles, corbeille]);
+
+  // Publication de la position tant qu'une collecte est en cours (suivi par le ménage)
+  const aCollecteEnCours = mesCollectes.some(s => s.status === "en cours");
+  useEffect(() => {
+    if (!aCollecteEnCours || !utilisateur?.uid || !navigator.geolocation) return;
+    let derniereMaj = 0;
+    const watchId = navigator.geolocation.watchPosition(
+      (pos) => {
+        const now = Date.now();
+        if (now - derniereMaj < 10000) return;
+        derniereMaj = now;
+        setDoc(doc(db, "positions", utilisateur.uid), {
+          lat: pos.coords.latitude, lng: pos.coords.longitude,
+          nom: utilisateur.nom || "", updatedAt: serverTimestamp()
+        }).catch(() => {});
+      },
+      () => {},
+      { enableHighAccuracy: true, maximumAge: 5000 }
+    );
+    return () => navigator.geolocation.clearWatch(watchId);
+  }, [aCollecteEnCours, utilisateur?.uid, utilisateur?.nom]);
+
+  const corbeilleIds = useMemo(() => new Set(corbeille.map(e => e.signalementId)), [corbeille]);
+
+  const ajouterCorbeille = (s) =>
+    setDoc(doc(db, "corbeilles", `${utilisateur.uid}_${s.id}`), {
+      collecteurId: utilisateur.uid, signalementId: s.id, addedAt: serverTimestamp()
+    });
+
+  const retirerCorbeille = (signalementId) =>
+    deleteDoc(doc(db, "corbeilles", `${utilisateur.uid}_${signalementId}`));
+
   const notifierMenage = async (menageTelephone) => {
-    const message = `✅ *Votre signalement a été accepté !*\n\n🚛 *Collecteur :* ${nomAffiche(utilisateur.nom)}\n📞 *Téléphone :* +${utilisateur.uid}\n\nIl arrive bientôt. Merci de faire confiance à Poubelle-CI ! 🗑️`;
+    const message = `✅ *Votre signalement a été accepté !*\n\n🚛 *Collecteur :* ${nomAffiche(utilisateur.nom)}\n📞 *Téléphone :* +${utilisateur.uid}\n\nIl arrive bientôt. Suivez sa position en direct sur l'app ! 🗺️\npoubelle-ci.vercel.app`;
     try {
       await fetch("https://wasenderapi.com/api/send-message", {
         method: "POST",
@@ -67,9 +118,10 @@ export default function Collecteur({ utilisateur, mode }) {
     }
   };
 
-  const accepter = async (id, signalement) => {
-    await updateDoc(doc(db, "signalements", id), { status: "en cours", collecteurId: utilisateur.uid, collecteurNom: utilisateur.nom });
-    if (signalement.uid) await notifierMenage(signalement.uid);
+  const valider = async (s) => {
+    await updateDoc(doc(db, "signalements", s.id), { status: "en cours", collecteurId: utilisateur.uid, collecteurNom: utilisateur.nom });
+    await retirerCorbeille(s.id).catch(() => {});
+    if (s.uid) await notifierMenage(s.uid);
   };
 
   const terminer = async (id, signalement) => {
@@ -88,10 +140,10 @@ export default function Collecteur({ utilisateur, mode }) {
     }
   };
 
-  const communesDisponibles = [...new Set(disponibles.map(s => s.commune).filter(Boolean))].sort();
-  const disponiblesFiltres = disponibles
-    .filter(s => filtreCommune ? s.commune === filtreCommune : true)
-    .filter(s => filtreUrgent ? s.urgent : true);
+  // Signalements de ma corbeille encore disponibles (joints aux brouillons)
+  const corbeilleItems = corbeille
+    .map(e => disponibles.find(s => s.id === e.signalementId))
+    .filter(Boolean);
 
   const Carte = ({ s, actions }) => {
     const st = STATUS[s.status] || STATUS["disponible"];
@@ -168,81 +220,101 @@ export default function Collecteur({ utilisateur, mode }) {
   return (
     <div style={{ padding: "16px 16px", maxWidth: 440, margin: "0 auto" }}>
 
-      {/* Stats */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 20 }}>
-        {[
-          { label: "Disponibles", value: disponibles.length, icon: faBox, color: "#16a34a", bg: "linear-gradient(135deg, #f0fdf4, #dcfce7)", border: "#bbf7d0" },
-          { label: "En cours", value: mesCollectes.filter(s => s.status === "en cours").length, icon: faClock, color: "#d97706", bg: "linear-gradient(135deg, #fffbeb, #fef3c7)", border: "#fde68a" },
-          { label: "Collectés", value: mesCollectes.filter(s => s.status === "collecté").length, icon: faCheck, color: "#3b82f6", bg: "linear-gradient(135deg, #eff6ff, #dbeafe)", border: "#bfdbfe" },
-        ].map(s => (
-          <div key={s.label} style={{ background: s.bg, borderRadius: 14, padding: "14px 8px", textAlign: "center", border: `1px solid ${s.border}`, boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
-            <div style={{ fontSize: 18 }}><FontAwesomeIcon icon={s.icon} /></div>
-            <div style={{ fontSize: 24, fontWeight: 900, color: s.color, lineHeight: 1.1 }}>{s.value}</div>
-            <div style={{ fontSize: 10, color: "#64748b", fontWeight: 600, marginTop: 2 }}>{s.label}</div>
-          </div>
-        ))}
-      </div>
-
-      {/* Vue Disponibles */}
-      {mode === "disponibles" && (
-        <div>
-          <div style={{ display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
-            <select value={filtreCommune} onChange={e => setFiltreCommune(e.target.value)} style={{
-              flex: 1, minWidth: 130, padding: "9px 12px", borderRadius: 12, border: "1.5px solid #e2e8f0",
-              fontSize: 12, color: "#0f172a", background: "white", outline: "none", fontWeight: 600,
-              boxShadow: "0 1px 3px rgba(0,0,0,0.06)"
-            }}>
-              <option value="">Toutes les communes</option>
-              {communesDisponibles.map(c => <option key={c} value={c}>{c}</option>)}
-            </select>
-
-            <button onClick={() => setFiltreUrgent(!filtreUrgent)} style={{
-              padding: "9px 14px", borderRadius: 12, cursor: "pointer", fontWeight: 700, fontSize: 12,
-              border: filtreUrgent ? "1.5px solid #ef4444" : "1.5px solid #e2e8f0",
-              background: filtreUrgent ? "#fef2f2" : "white", color: filtreUrgent ? "#ef4444" : "#64748b",
-              boxShadow: "0 1px 3px rgba(0,0,0,0.06)"
-            }}><FontAwesomeIcon icon={faTriangleExclamation} style={{ marginRight: 5 }} />Urgent</button>
-
-            {(filtreCommune || filtreUrgent) && (
-              <button onClick={() => { setFiltreCommune(""); setFiltreUrgent(false); }} style={{
-                padding: "9px 12px", borderRadius: 12, border: "1.5px solid #e2e8f0",
-                background: "white", color: "#64748b", fontSize: 12, cursor: "pointer"
-              }}><FontAwesomeIcon icon={faXmark} /></button>
-            )}
-          </div>
-
-          <div style={{ fontSize: 12, color: "#94a3b8", marginBottom: 12, textAlign: "right", fontWeight: 600 }}>
-            {disponiblesFiltres.length} résultat{disponiblesFiltres.length > 1 ? "s" : ""}
-          </div>
-
-          {disponiblesFiltres.length === 0 && (
-            <div style={{ textAlign: "center", padding: 48, color: "#94a3b8" }}>
-              <div style={{ fontSize: 36, marginBottom: 8 }}><FontAwesomeIcon icon={faTrash} /></div>
-              <div style={{ fontSize: 13 }}>Aucun signalement pour ce filtre</div>
+      {/* Stats (hors vue carte) */}
+      {mode !== "carte" && (
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 20 }}>
+          {[
+            { label: "Corbeille", value: corbeilleItems.length, icon: faBasketShopping, color: "#d97706", bg: "linear-gradient(135deg, #fffbeb, #fef3c7)", border: "#fde68a" },
+            { label: "En cours", value: mesCollectes.filter(s => s.status === "en cours").length, icon: faClock, color: "#16a34a", bg: "linear-gradient(135deg, #f0fdf4, #dcfce7)", border: "#bbf7d0" },
+            { label: "Collectés", value: mesCollectes.filter(s => s.status === "collecté").length, icon: faCheck, color: "#3b82f6", bg: "linear-gradient(135deg, #eff6ff, #dbeafe)", border: "#bfdbfe" },
+          ].map(s => (
+            <div key={s.label} style={{ background: s.bg, borderRadius: 14, padding: "14px 8px", textAlign: "center", border: `1px solid ${s.border}`, boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
+              <div style={{ fontSize: 18 }}><FontAwesomeIcon icon={s.icon} /></div>
+              <div style={{ fontSize: 24, fontWeight: 900, color: s.color, lineHeight: 1.1 }}>{s.value}</div>
+              <div style={{ fontSize: 10, color: "#64748b", fontWeight: 600, marginTop: 2 }}>{s.label}</div>
             </div>
-          )}
-
-          {disponiblesFiltres.map(s => (
-            <Carte key={s.id} s={s} actions={
-              <button onClick={() => {
-                if (window.confirm("Accepter cette collecte ?\n\n📍 " + s.commune + " — " + s.quartier + "\n🗑️ " + s.type + " · " + s.volume)) {
-                  accepter(s.id, s);
-                }
-              }} style={{
-                width: "100%", padding: "11px", cursor: "pointer", fontWeight: 800, fontSize: 13,
-                background: "linear-gradient(135deg, #16a34a, #15803d)", color: "white",
-                border: "none", borderRadius: 12, boxShadow: "0 3px 10px rgba(22,163,74,0.3)"
-              }}>
-                <FontAwesomeIcon icon={faHandPointer} style={{ marginRight: 6 }} />Accepter cette collecte
-              </button>
-            } />
           ))}
+        </div>
+      )}
+
+      {/* Vue Carte */}
+      {mode === "carte" && (
+        <CarteCollecteur
+          signalements={disponibles}
+          corbeilleIds={corbeilleIds}
+          onAjouter={ajouterCorbeille}
+          onRetirer={retirerCorbeille}
+          nbCorbeille={corbeilleItems.length}
+          onVoirCorbeille={() => onChangeMode?.("corbeille")}
+        />
+      )}
+
+      {/* Vue Corbeille (brouillons à valider) */}
+      {mode === "corbeille" && (
+        <div>
+          {corbeilleItems.length === 0 ? (
+            <div style={{ textAlign: "center", padding: 48, color: "#94a3b8" }}>
+              <div style={{ fontSize: 36, marginBottom: 8 }}><FontAwesomeIcon icon={faBasketShopping} /></div>
+              <div style={{ fontSize: 13, marginBottom: 16 }}>Votre corbeille est vide.<br />Ajoutez des signalements depuis la carte.</div>
+              <button onClick={() => onChangeMode?.("carte")} style={{
+                padding: "11px 22px", borderRadius: 12, border: "none", cursor: "pointer",
+                background: "linear-gradient(135deg, #16a34a, #15803d)", color: "white",
+                fontWeight: 800, fontSize: 13, boxShadow: "0 3px 10px rgba(22,163,74,0.3)"
+              }}>
+                <FontAwesomeIcon icon={faMap} style={{ marginRight: 6 }} />Voir la carte
+              </button>
+            </div>
+          ) : (
+            <>
+              <div style={{
+                background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 12,
+                padding: "10px 14px", marginBottom: 14, fontSize: 12, color: "#92400e", fontWeight: 600
+              }}>
+                <FontAwesomeIcon icon={faBasketShopping} style={{ marginRight: 6 }} />
+                Ce sont des brouillons : validez pour vous engager. Le ménage sera notifié par WhatsApp.
+              </div>
+
+              {corbeilleItems.map(s => (
+                <Carte key={s.id} s={s} actions={
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button onClick={() => retirerCorbeille(s.id)} style={{
+                      flex: 1, padding: "11px", cursor: "pointer", fontWeight: 700, fontSize: 12,
+                      background: "#fff5f5", color: "#ef4444", border: "1px solid #fecaca", borderRadius: 12
+                    }}>
+                      <FontAwesomeIcon icon={faXmark} style={{ marginRight: 5 }} />Retirer
+                    </button>
+                    <button onClick={() => {
+                      if (window.confirm("Valider cette collecte ?\n\n📍 " + s.commune + " — " + s.quartier + "\n🗑️ " + s.type + " · " + s.volume + "\n\nLe ménage sera notifié et pourra suivre votre position.")) {
+                        valider(s);
+                      }
+                    }} style={{
+                      flex: 2, padding: "11px", cursor: "pointer", fontWeight: 800, fontSize: 13,
+                      background: "linear-gradient(135deg, #16a34a, #15803d)", color: "white",
+                      border: "none", borderRadius: 12, boxShadow: "0 3px 10px rgba(22,163,74,0.3)"
+                    }}>
+                      <FontAwesomeIcon icon={faCircleCheck} style={{ marginRight: 6 }} />Valider la collecte
+                    </button>
+                  </div>
+                } />
+              ))}
+            </>
+          )}
         </div>
       )}
 
       {/* Vue Mes collectes */}
       {mode === "mescollectes" && (
         <div>
+          {aCollecteEnCours && (
+            <div style={{
+              background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 12,
+              padding: "10px 14px", marginBottom: 14, fontSize: 12, color: "#15803d", fontWeight: 600
+            }}>
+              <FontAwesomeIcon icon={faLocationDot} style={{ marginRight: 6 }} />
+              Votre position est partagée avec les ménages en attente, jusqu'à la fin du ramassage.
+            </div>
+          )}
+
           {mesCollectes.length === 0 && (
             <div style={{ textAlign: "center", padding: 48, color: "#94a3b8" }}>
               <div style={{ fontSize: 36, marginBottom: 8 }}><FontAwesomeIcon icon={faTruck} /></div>

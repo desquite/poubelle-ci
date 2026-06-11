@@ -56,3 +56,19 @@ export const COMMUNES_QUARTIERS = {
 };
 
 export const COMMUNES = Object.keys(COMMUNES_QUARTIERS).sort();
+
+// Coordonnées GPS approximatives du centre de chaque commune (pour recentrer la carte)
+export const COMMUNES_COORDS = {
+  "ABOBO":       { lat: 5.4262, lng: -4.0160 },
+  "ADJAMÉ":      { lat: 5.3536, lng: -4.0227 },
+  "ATTÉCOUBÉ":   { lat: 5.3406, lng: -4.0508 },
+  "COCODY":      { lat: 5.3536, lng: -3.9678 },
+  "KOUMASSI":    { lat: 5.2889, lng: -3.9463 },
+  "MARCORY":     { lat: 5.3008, lng: -3.9810 },
+  "PLATEAU":     { lat: 5.3252, lng: -4.0214 },
+  "PORT-BOUËT":  { lat: 5.2559, lng: -3.9269 },
+  "TREICHVILLE": { lat: 5.3097, lng: -4.0125 },
+  "YOPOUGON":    { lat: 5.3456, lng: -4.0892 },
+};
+
+export const ABIDJAN_CENTER = { lat: 5.3477, lng: -4.0244 };
