@@ -105,39 +105,24 @@ export default function Collecteur({ utilisateur, mode, onChangeMode }) {
   const retirerCorbeille = (signalementId) =>
     deleteDoc(doc(db, "corbeilles", `${utilisateur.uid}_${signalementId}`));
 
-  const notifierMenage = async (menageTelephone) => {
-    const message = `✅ *Votre signalement a été accepté !*\n\n🚛 *Collecteur :* ${nomAffiche(utilisateur.nom)}\n📞 *Téléphone :* +${utilisateur.uid}\n\nIl arrive bientôt. Suivez sa position en direct sur l'app ! 🗺️\npoubelle-ci.vercel.app`;
-    try {
-      await fetch("https://wasenderapi.com/api/send-message", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${import.meta.env.VITE_WASENDER_API_KEY}` },
-        body: JSON.stringify({ sessionId: import.meta.env.VITE_WASENDER_SESSION_ID, to: menageTelephone, text: message })
-      });
-    } catch (e) {
-      console.error("WaSender erreur:", e.message);
-    }
-  };
+  // Les notifications WhatsApp partent du serveur : on n'envoie que l'id,
+  // le contenu et le destinataire sont relus depuis Firestore côté API.
+  const notifier = (type, signalementId) =>
+    fetch("/api/notifier-collecte", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ type, signalementId })
+    }).catch((e) => console.error("Notification erreur:", e.message));
 
   const valider = async (s) => {
     await updateDoc(doc(db, "signalements", s.id), { status: "en cours", collecteurId: utilisateur.uid, collecteurNom: utilisateur.nom });
     await retirerCorbeille(s.id).catch(() => {});
-    if (s.uid) await notifierMenage(s.uid);
+    await notifier("acceptation", s.id);
   };
 
-  const terminer = async (id, signalement) => {
+  const terminer = async (id) => {
     await updateDoc(doc(db, "signalements", id), { status: "collecté" });
-    if (signalement.uid) {
-      const message = `✅ *Votre poubelle a été collectée !*\n\n🚛 *Collecteur :* ${nomAffiche(utilisateur.nom)}\n📍 ${signalement.commune} — ${signalement.quartier}\n\nMerci d'utiliser Poubelle-CI ! 🌍\npoubelle-ci.vercel.app`;
-      try {
-        await fetch("https://wasenderapi.com/api/send-message", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${import.meta.env.VITE_WASENDER_API_KEY}` },
-          body: JSON.stringify({ sessionId: import.meta.env.VITE_WASENDER_SESSION_ID, to: signalement.uid, text: message })
-        });
-      } catch (e) {
-        console.error("WaSender erreur:", e.message);
-      }
-    }
+    await notifier("collecte_terminee", id);
   };
 
   // Signalements de ma corbeille encore disponibles (joints aux brouillons)
@@ -325,7 +310,7 @@ export default function Collecteur({ utilisateur, mode, onChangeMode }) {
           {mesCollectes.map(s => (
             <Carte key={s.id} s={s} actions={
               s.status === "en cours" ? (
-                <button onClick={() => terminer(s.id, s)} style={{
+                <button onClick={() => terminer(s.id)} style={{
                   width: "100%", padding: "11px", cursor: "pointer", fontWeight: 800, fontSize: 13,
                   background: "linear-gradient(135deg, #0f2d0f, #166534)", color: "white",
                   border: "none", borderRadius: 12, boxShadow: "0 3px 10px rgba(15,45,15,0.3)"

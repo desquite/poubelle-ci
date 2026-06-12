@@ -1,0 +1,60 @@
+// Règles de sécurité Firestore — à coller dans la console Firebase → Firestore → Règles.
+// Nécessite la vraie authentification Firebase (custom tokens via /api/otp) :
+// request.auth.uid = numéro de téléphone de l'utilisateur.
+
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function connecte() {
+      return request.auth != null;
+    }
+
+    function estAdmin() {
+      return connecte()
+        && get(/databases/$(database)/documents/utilisateurs/$(request.auth.uid)).data.role == "admin";
+    }
+
+    // Signalements : lecture publique (page d'accueil), écritures contrôlées
+    match /signalements/{id} {
+      allow read: if true;
+      allow create: if connecte() && request.resource.data.uid == request.auth.uid;
+      allow update: if connecte() && (
+        resource.data.uid == request.auth.uid
+        || (resource.data.status == "disponible" && request.resource.data.collecteurId == request.auth.uid)
+        || resource.data.collecteurId == request.auth.uid
+        || estAdmin()
+      );
+      allow delete: if connecte() && (resource.data.uid == request.auth.uid || estAdmin());
+    }
+
+    // Profils : chacun le sien ; l'admin voit et gère tout.
+    // Un utilisateur ne peut pas s'auto-attribuer le rôle admin.
+    match /utilisateurs/{uid} {
+      allow get: if connecte() && (request.auth.uid == uid || estAdmin());
+      allow list: if estAdmin();
+      allow create, update: if connecte() && request.auth.uid == uid
+        && request.resource.data.role in ["menage", "collecteur"];
+      allow update: if estAdmin();
+      allow delete: if estAdmin();
+    }
+
+    // Corbeilles (brouillons) : chaque collecteur gère uniquement les siennes
+    match /corbeilles/{id} {
+      allow read, delete: if connecte() && resource.data.collecteurId == request.auth.uid;
+      allow create: if connecte() && request.resource.data.collecteurId == request.auth.uid;
+    }
+
+    // Positions temps réel : écrites par le collecteur lui-même, lues par les connectés
+    match /positions/{uid} {
+      allow read: if connecte();
+      allow write: if connecte() && request.auth.uid == uid;
+    }
+
+    // Codes OTP : réservés au serveur (admin SDK, qui ignore les règles)
+    match /otps/{tel} {
+      allow read, write: if false;
+    }
+  }
+}

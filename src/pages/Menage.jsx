@@ -7,7 +7,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faTrash, faLocationDot, faClock, faMap, faTriangleExclamation,
   faBox, faCheck, faClipboardList, faSatelliteDish, faCamera,
-  faArrowLeft, faPlus, faCircleCheck, faTruck
+  faCircleCheck, faTruck
 } from "@fortawesome/free-solid-svg-icons";
 
 const WASTE_TYPES = ["Ordures ménagères", "Encombrants", "Déchets recyclables", "Déchets organiques"];
@@ -100,8 +100,8 @@ export default function Menage({ utilisateur, mode }) {
     if (!form.commune || !form.quartier || !form.type || !form.volume || !form.lat) return;
     setLoading(true);
     try {
-      await addDoc(collection(db, "signalements"), { ...form, uid: utilisateur.uid, status: "disponible", createdAt: serverTimestamp() });
-      await fetch("/api/notifier", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ signalement: form }) });
+      const ref = await addDoc(collection(db, "signalements"), { ...form, uid: utilisateur.uid, status: "disponible", createdAt: serverTimestamp() });
+      await fetch("/api/notifier", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ signalementId: ref.id }) });
       setStep(3);
       setForm({ nom: utilisateur?.nom || "", commune: utilisateur?.commune || "", quartier: utilisateur?.quartier || "", adresse: "", type: "", volume: "", notes: "", urgent: false, lat: null, lng: null, photo: null });
       setGpsOk(false);

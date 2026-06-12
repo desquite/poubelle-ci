@@ -1,17 +1,7 @@
-import { initializeApp, cert, getApps } from "firebase-admin/app";
-import { getFirestore } from "firebase-admin/firestore";
+// Notification WhatsApp aux collecteurs de la zone lors d'un nouveau signalement.
+// Le client n'envoie que l'id : les données sont relues depuis Firestore.
 
-if (!getApps().length) {
-  initializeApp({
-    credential: cert({
-      projectId: process.env.FIREBASE_PROJECT_ID,
-      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n"),
-    })
-  });
-}
-
-const db = getFirestore();
+import { db, envoyerWhatsApp } from "./_firebase.js";
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -19,8 +9,16 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { signalement } = req.body;
-    const { commune, quartier, nom, type, volume, urgent, lat, lng } = signalement;
+    const { signalementId } = req.body || {};
+    if (!signalementId) return res.status(400).json({ error: "signalementId requis" });
+
+    const snap = await db.collection("signalements").doc(String(signalementId)).get();
+    if (!snap.exists) return res.status(404).json({ error: "Signalement introuvable" });
+
+    const s = snap.data();
+    if (s.status !== "disponible") return res.status(400).json({ error: "Signalement non disponible" });
+
+    const { commune, quartier, nom, type, volume, urgent, lat, lng } = s;
 
     const snapshot = await db.collection("utilisateurs")
       .where("role", "==", "collecteur")
@@ -33,25 +31,7 @@ export default async function handler(req, res) {
 
     const message = `🗑️ *Nouveau signalement - Poubelle-CI*\n\n📍 *${commune} — ${quartier}*\n👤 ${nom}\n🗑️ ${type} · ${volume}${urgent ? "\n🔴 URGENT !" : ""}${lat ? `\n\n🗺️ Localisation : https://www.google.com/maps?q=${lat},${lng}` : ""}\n\n👉 Connectez-vous pour accepter !\npoubelle-ci.vercel.app`;
 
-    const WASENDER_KEY = process.env.WASENDER_API_KEY || process.env.VITE_WASENDER_API_KEY;
-    const SESSION_ID = process.env.WASENDER_SESSION_ID || process.env.VITE_WASENDER_SESSION_ID;
-
-    const envois = collecteurs.map(collecteur =>
-      fetch("https://wasenderapi.com/api/send-message", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${WASENDER_KEY}`
-        },
-        body: JSON.stringify({
-          sessionId: SESSION_ID,
-          to: collecteur.telephone,
-          text: message
-        })
-      })
-    );
-
-    await Promise.all(envois);
+    await Promise.all(collecteurs.map(c => envoyerWhatsApp(c.telephone, message)));
 
     return res.status(200).json({ success: true, notifies: collecteurs.length });
 

@@ -2,30 +2,22 @@
 
 import { useState } from "react";
 import { doc, setDoc } from "firebase/firestore";
-import { db } from "../firebase/config";
+import { signInWithCustomToken } from "firebase/auth";
+import { db, auth } from "../firebase/config";
 import { COMMUNES_QUARTIERS, COMMUNES } from "../quartiers";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faHouse, faTruck, faCheck, faArrowLeft, faComment, faUserPlus, faShieldHalved } from "@fortawesome/free-solid-svg-icons";
 
-const WASENDER_KEY = import.meta.env.VITE_WASENDER_API_KEY;
-const SESSION_ID = import.meta.env.VITE_WASENDER_SESSION_ID;
-
-const genererCode = () => Math.floor(100000 + Math.random() * 900000).toString();
-
-const envoyerWhatsApp = async (numero, code) => {
-  const response = await fetch("https://wasenderapi.com/api/send-message", {
+// L'OTP est géré côté serveur (/api/otp) : le code n'apparaît jamais dans le navigateur.
+const apiOtp = async (payload) => {
+  const r = await fetch("/api/otp", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${WASENDER_KEY}`
-    },
-    body: JSON.stringify({
-      sessionId: SESSION_ID,
-      to: "225" + numero.replace(/\s/g, ""),
-      text: `*${code}* est votre code de vérification Poubelle-CI.\n\nCe code expire dans 5 minutes. Ne le partagez pas.`
-    })
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
   });
-  return response.ok;
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.error || "Erreur serveur");
+  return data;
 };
 
 export default function Inscription({ onInscrit }) {
@@ -36,10 +28,8 @@ export default function Inscription({ onInscrit }) {
   const [commune, setCommune] = useState("");
   const [quartier, setQuartier] = useState("");
   const [code, setCode] = useState("");
-  const [codeAttendu, setCodeAttendu] = useState("");
   const [loading, setLoading] = useState(false);
   const [erreur, setErreur] = useState("");
-  const [expiration, setExpiration] = useState(null);
 
   const inputStyle = {
     width: "100%", padding: "12px", borderRadius: 10,
@@ -61,17 +51,10 @@ export default function Inscription({ onInscrit }) {
     setLoading(true);
     setErreur("");
     try {
-      const nouveauCode = genererCode();
-      const ok = await envoyerWhatsApp(telephone, nouveauCode);
-      if (ok) {
-        setCodeAttendu(nouveauCode);
-        setExpiration(Date.now() + 5 * 60 * 1000);
-        setEtape(2);
-      } else {
-        setErreur("Erreur d'envoi WhatsApp. Vérifiez votre numéro.");
-      }
+      await apiOtp({ action: "send", telephone: "225" + telephone.replace(/\s/g, ""), contexte: "inscription" });
+      setEtape(2);
     } catch (e) {
-      setErreur("Erreur : " + e.message);
+      setErreur(e.message);
     }
     setLoading(false);
   };
@@ -80,24 +63,16 @@ export default function Inscription({ onInscrit }) {
     if (!code) return;
     setLoading(true);
     setErreur("");
-    if (Date.now() > expiration) {
-      setErreur("Code expiré. Veuillez recommencer.");
-      setLoading(false);
-      return;
-    }
-    if (code !== codeAttendu) {
-      setErreur("Code incorrect. Réessayez.");
-      setLoading(false);
-      return;
-    }
     try {
       const uid = "225" + telephone.replace(/\s/g, "");
+      const { token } = await apiOtp({ action: "verify", telephone: uid, code });
+      await signInWithCustomToken(auth, token);
       await setDoc(doc(db, "utilisateurs", uid), {
         nom, telephone: uid, role, commune, quartier, createdAt: new Date()
       });
       onInscrit({ uid, nom, role, commune, quartier });
     } catch (e) {
-      setErreur("Erreur : " + e.message);
+      setErreur(e.message);
     }
     setLoading(false);
   };
