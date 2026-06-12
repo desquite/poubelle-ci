@@ -8,26 +8,16 @@ import Inscription from "./pages/Inscription";
 import Connexion from "./pages/Connexion";
 import Admin from "./pages/Admin";
 import CartePublique from "./components/CartePublique";
-import { formatFCFA } from "./utils/format";
+import CarteSignalement from "./components/CarteSignalement";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-  faTrash, faLocationDot, faClock, faMap, faTriangleExclamation, faXmark,
+  faTrash, faClock, faMap, faTriangleExclamation, faXmark,
   faTruck, faHouse, faBox, faChartBar, faUsers, faClipboardList,
-  faLock, faUserPlus, faMobileScreen, faGlobe, faCircleCheck, faChevronRight, faArrowLeft,
-  faBasketShopping, faCoins
+  faLock, faUserPlus, faMobileScreen, faGlobe, faArrowLeft,
+  faBasketShopping
 } from "@fortawesome/free-solid-svg-icons";
 
 const nomAffiche = (nom) => nom?.trim().split(/\s+/).pop() || nom || "";
-
-const timeAgo = (timestamp) => {
-  if (!timestamp?.seconds) return "";
-  const now = Date.now();
-  const diff = Math.floor((now - timestamp.seconds * 1000) / 1000);
-  if (diff < 60) return "À l'instant";
-  if (diff < 3600) return `${Math.floor(diff / 60)} min`;
-  if (diff < 86400) return `${Math.floor(diff / 3600)} h`;
-  return `${Math.floor(diff / 86400)} j`;
-};
 
 const auth = getAuth();
 
@@ -134,71 +124,7 @@ function SignalementsPublics({ onInscription }) {
       )}
 
       {vue === "liste" && filtres.map(s => (
-        <div key={s.id} style={{
-          background: "white", borderRadius: 16, marginBottom: 12, overflow: "hidden",
-          boxShadow: s.urgent
-            ? "0 0 0 2px #fca5a5, 0 4px 16px rgba(239,68,68,0.1)"
-            : "0 2px 12px rgba(0,0,0,0.07)",
-          transition: "box-shadow 0.2s"
-        }}>
-          <div style={{ display: "flex" }}>
-            {/* Image */}
-            <div style={{ width: 100, minHeight: 110, flexShrink: 0, position: "relative", overflow: "hidden", background: "#f1f5f9" }}>
-              {s.photo ? (
-                <img src={s.photo} alt="poubelle"
-                  style={{ width: "100%", height: "100%", objectFit: "cover", position: "absolute", inset: 0 }} />
-              ) : (
-                <div style={{
-                  position: "absolute", inset: 0, display: "flex", flexDirection: "column",
-                  alignItems: "center", justifyContent: "center", gap: 4,
-                  background: "linear-gradient(135deg, #f0fdf4, #dcfce7)"
-                }}>
-                  <span style={{ fontSize: 30, color: "#86efac" }}><FontAwesomeIcon icon={faTrash} /></span>
-                  <span style={{ fontSize: 9, color: "#86efac", fontWeight: 600 }}>Pas de photo</span>
-                </div>
-              )}
-              {/* Badge urgent sur l'image */}
-              {s.urgent && (
-                <div style={{
-                  position: "absolute", top: 6, left: 6,
-                  background: "#ef4444", color: "white",
-                  fontSize: 9, fontWeight: 800, padding: "2px 6px", borderRadius: 6
-                }}>URGENT</div>
-              )}
-            </div>
-
-            {/* Contenu */}
-            <div style={{ flex: 1, padding: "12px 14px", display: "flex", flexDirection: "column", gap: 5 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                <div style={{ fontSize: 15, fontWeight: 800, color: "#0f172a" }}>{nomAffiche(s.nom)}</div>
-                <div style={{ fontSize: 10, color: "#94a3b8", whiteSpace: "nowrap", marginLeft: 8 }}><FontAwesomeIcon icon={faClock} style={{ marginRight: 3 }} />{timeAgo(s.createdAt)}</div>
-              </div>
-
-              <div style={{ fontSize: 12, color: "#16a34a", fontWeight: 700 }}>
-                <FontAwesomeIcon icon={faLocationDot} style={{ marginRight: 4 }} />{s.commune} <span style={{ color: "#94a3b8", fontWeight: 400 }}>— {s.quartier}</span>
-              </div>
-
-              <div style={{ fontSize: 11, color: "#475569" }}>
-                <FontAwesomeIcon icon={faTrash} style={{ marginRight: 4 }} />{s.type}
-              </div>
-
-              {formatFCFA(s.prix) && (
-                <div style={{ fontSize: 14, fontWeight: 900, color: "#16a34a" }}>
-                  <FontAwesomeIcon icon={faCoins} style={{ marginRight: 5 }} />{formatFCFA(s.prix)}
-                </div>
-              )}
-
-              <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 2 }}>
-                <span style={{
-                  background: "#f0fdf4", color: "#16a34a", border: "1px solid #bbf7d0",
-                  fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 20
-                }}>
-                  {s.volume}
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
+        <CarteSignalement key={s.id} s={s} />
       ))}
 
       {/* CTA collecteur */}

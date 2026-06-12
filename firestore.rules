@@ -26,6 +26,9 @@ service cloud.firestore {
         || resource.data.collecteurId == request.auth.uid
         || estAdmin()
       );
+      // Tout collecteur connecté peut incrémenter/décrémenter le compteur de corbeilles (seul champ modifiable)
+      allow update: if connecte()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["corbeillesCount"]);
       allow delete: if connecte() && (resource.data.uid == request.auth.uid || estAdmin());
     }
 

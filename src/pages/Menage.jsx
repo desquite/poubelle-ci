@@ -2,33 +2,17 @@ import { useState, useEffect } from "react";
 import { collection, addDoc, serverTimestamp, query, where, onSnapshot, deleteDoc, doc } from "firebase/firestore";
 import { db } from "../firebase/config";
 import { COMMUNES_QUARTIERS, COMMUNES } from "../quartiers";
-import { formatFCFA } from "../utils/format";
 import SuiviCollecte from "../components/SuiviCollecte";
+import CarteSignalement from "../components/CarteSignalement";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-  faTrash, faLocationDot, faClock, faMap, faTriangleExclamation,
+  faTrash, faLocationDot, faClock, faTriangleExclamation,
   faBox, faCheck, faClipboardList, faSatelliteDish, faCamera,
   faCircleCheck, faTruck, faCoins
 } from "@fortawesome/free-solid-svg-icons";
 
 const WASTE_TYPES = ["Ordures ménagères", "Encombrants", "Déchets recyclables", "Déchets organiques"];
 const VOLUMES = ["Petit (moins d'un sac)", "Moyen (1-2 sacs)", "Grand (2-3 sacs)", "Gros volume", "Très grand volume"];
-
-const STATUS = {
-  "disponible": { bg: "#f0fdf4", text: "#16a34a", border: "#bbf7d0" },
-  "en cours":   { bg: "#fffbeb", text: "#d97706", border: "#fde68a" },
-  "collecté":   { bg: "#f8fafc", text: "#64748b", border: "#e2e8f0" },
-};
-
-const timeAgo = (timestamp) => {
-  if (!timestamp?.seconds) return "";
-  const now = Date.now();
-  const diff = Math.floor((now - timestamp.seconds * 1000) / 1000);
-  if (diff < 60) return "À l'instant";
-  if (diff < 3600) return `${Math.floor(diff / 60)} min`;
-  if (diff < 86400) return `${Math.floor(diff / 3600)} h`;
-  return `${Math.floor(diff / 86400)} j`;
-};
 
 const uploadImage = async (file) => {
   const formData = new FormData();
@@ -148,66 +132,26 @@ export default function Menage({ utilisateur, mode }) {
         </div>
       )}
 
-      {mesSignalements.map(s => {
-        const st = STATUS[s.status] || STATUS["disponible"];
-        return (
-          <div key={s.id} style={{ background: "white", borderRadius: 16, marginBottom: 12, overflow: "hidden", boxShadow: "0 2px 12px rgba(0,0,0,0.07)" }}>
-            <div style={{ display: "flex" }}>
-              <div style={{ width: 100, minHeight: 110, flexShrink: 0, position: "relative", overflow: "hidden", background: "#f1f5f9" }}>
-                {s.photo ? (
-                  <img src={s.photo} alt="poubelle" style={{ width: "100%", height: "100%", objectFit: "cover", position: "absolute", inset: 0 }} />
-                ) : (
-                  <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: "linear-gradient(135deg, #f0fdf4, #dcfce7)" }}>
-                    <span style={{ fontSize: 28, color: "#86efac" }}><FontAwesomeIcon icon={faTrash} /></span>
-                  </div>
-                )}
-                {s.urgent && <div style={{ position: "absolute", top: 6, left: 6, background: "#ef4444", color: "white", fontSize: 9, fontWeight: 800, padding: "2px 6px", borderRadius: 6 }}>URGENT</div>}
-              </div>
-
-              <div style={{ flex: 1, padding: "12px 14px", display: "flex", flexDirection: "column", gap: 5 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                  <div style={{ fontSize: 14, fontWeight: 800, color: "#0f172a" }}>{s.type}</div>
-                  <div style={{ fontSize: 10, color: "#94a3b8" }}><FontAwesomeIcon icon={faClock} style={{ marginRight: 3 }} />{timeAgo(s.createdAt)}</div>
-                </div>
-                <div style={{ fontSize: 12, color: "#16a34a", fontWeight: 700 }}>
-                  <FontAwesomeIcon icon={faLocationDot} style={{ marginRight: 4 }} />{s.commune} <span style={{ color: "#94a3b8", fontWeight: 400 }}>— {s.quartier}</span>
-                </div>
-                {formatFCFA(s.prix) && <div style={{ fontSize: 14, fontWeight: 800, color: "#0f172a" }}><FontAwesomeIcon icon={faCoins} style={{ marginRight: 5, color: "#16a34a" }} />{formatFCFA(s.prix)}</div>}
-                <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 2 }}>
-                  <span style={{ background: st.bg, color: st.text, border: `1px solid ${st.border}`, fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 20 }}>{s.status}</span>
-                  <span style={{ background: "#f8fafc", color: "#475569", border: "1px solid #e2e8f0", fontSize: 10, padding: "2px 8px", borderRadius: 20 }}>{s.volume}</span>
-                  {s.lat && (
-                    <a href={`https://www.google.com/maps?q=${s.lat},${s.lng}`} target="_blank" rel="noreferrer" style={{ textDecoration: "none" }}>
-                      <span style={{ background: "#eff6ff", color: "#3b82f6", border: "1px solid #bfdbfe", fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 20 }}><FontAwesomeIcon icon={faMap} style={{ marginRight: 4 }} />GPS</span>
-                    </a>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {s.status === "en cours" && s.collecteurId && s.lat ? (
-              <div style={{ borderTop: "1px solid #f1f5f9", padding: "10px 14px" }}>
-                <button onClick={() => setSuiviId(s.id)} style={{
-                  width: "100%", padding: "11px", cursor: "pointer", fontWeight: 800, fontSize: 13,
-                  background: "linear-gradient(135deg, #16a34a, #15803d)", color: "white",
-                  border: "none", borderRadius: 12, boxShadow: "0 3px 10px rgba(22,163,74,0.3)"
-                }}>
-                  <FontAwesomeIcon icon={faTruck} style={{ marginRight: 6 }} />Suivre le collecteur sur la carte
-                </button>
-              </div>
-            ) : s.status !== "en cours" && (
-              <div style={{ borderTop: "1px solid #f1f5f9", padding: "10px 14px" }}>
-                <button onClick={() => supprimerSignalement(s.id, s.status)} style={{
-                  width: "100%", padding: "9px", background: "#fff5f5", color: "#ef4444",
-                  border: "1px solid #fecaca", borderRadius: 10, fontWeight: 700, cursor: "pointer", fontSize: 12
-                }}>
-                  <FontAwesomeIcon icon={faTrash} style={{ marginRight: 5 }} />Supprimer
-                </button>
-              </div>
-            )}
-          </div>
-        );
-      })}
+      {mesSignalements.map(s => (
+        <CarteSignalement key={s.id} s={s} titre={s.type} actions={
+          s.status === "en cours" && s.collecteurId && s.lat ? (
+            <button onClick={() => setSuiviId(s.id)} style={{
+              width: "100%", padding: "11px", cursor: "pointer", fontWeight: 800, fontSize: 13,
+              background: "linear-gradient(135deg, #16a34a, #15803d)", color: "white",
+              border: "none", borderRadius: 12, boxShadow: "0 3px 10px rgba(22,163,74,0.3)"
+            }}>
+              <FontAwesomeIcon icon={faTruck} style={{ marginRight: 6 }} />Suivre le collecteur sur la carte
+            </button>
+          ) : s.status !== "en cours" ? (
+            <button onClick={() => supprimerSignalement(s.id, s.status)} style={{
+              width: "100%", padding: "9px", background: "#fff5f5", color: "#ef4444",
+              border: "1px solid #fecaca", borderRadius: 10, fontWeight: 700, cursor: "pointer", fontSize: 12
+            }}>
+              <FontAwesomeIcon icon={faTrash} style={{ marginRight: 5 }} />Supprimer
+            </button>
+          ) : null
+        } />
+      ))}
     </div>
   );
 

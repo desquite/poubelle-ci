@@ -1,10 +1,10 @@
 import { useState, useEffect } from "react";
-import { collection, onSnapshot, doc, updateDoc, query, orderBy } from "firebase/firestore";
+import { collection, onSnapshot, doc, updateDoc } from "firebase/firestore";
 import { db } from "../firebase/config";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faTrash, faLocationDot, faTruck, faHouse, faBox, faChartBar,
-  faClipboardList, faPhone, faTriangleExclamation, faCheck,
+  faClipboardList, faPhone, faTriangleExclamation,
   faBan, faUnlock, faTrophy
 } from "@fortawesome/free-solid-svg-icons";
 

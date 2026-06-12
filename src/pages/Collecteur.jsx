@@ -1,37 +1,30 @@
 import { useState, useEffect, useMemo } from "react";
-import { collection, onSnapshot, doc, updateDoc, query, where, setDoc, deleteDoc, serverTimestamp } from "firebase/firestore";
+import { collection, onSnapshot, doc, updateDoc, query, where, setDoc, deleteDoc, serverTimestamp, increment } from "firebase/firestore";
 import { db } from "../firebase/config";
 import CarteCollecteur from "../components/CarteCollecteur";
-import { formatFCFA } from "../utils/format";
+import CarteSignalement from "../components/CarteSignalement";
+import { distanceKm } from "../utils/geo";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-  faTrash, faLocationDot, faClock, faMap, faXmark,
-  faTruck, faCheck, faPhone, faComment, faBasketShopping, faCircleCheck, faCoins
+  faLocationDot, faClock, faMap, faXmark,
+  faTruck, faCheck, faBasketShopping, faCircleCheck
 } from "@fortawesome/free-solid-svg-icons";
-
-const nomAffiche = (nom) => nom?.trim().split(/\s+/).pop() || nom || "";
-
-const timeAgo = (timestamp) => {
-  if (!timestamp?.seconds) return "";
-  const now = Date.now();
-  const diff = Math.floor((now - timestamp.seconds * 1000) / 1000);
-  if (diff < 60) return "À l'instant";
-  if (diff < 3600) return `${Math.floor(diff / 60)} min`;
-  if (diff < 86400) return `${Math.floor(diff / 3600)} h`;
-  return `${Math.floor(diff / 86400)} j`;
-};
-
-const STATUS = {
-  "disponible": { bg: "#f0fdf4", text: "#16a34a", border: "#bbf7d0" },
-  "en cours":   { bg: "#fffbeb", text: "#d97706", border: "#fde68a" },
-  "collecté":   { bg: "#f8fafc", text: "#64748b", border: "#e2e8f0" },
-};
 
 export default function Collecteur({ utilisateur, mode, onChangeMode }) {
   const [disponibles, setDisponibles] = useState([]);
   const [mesCollectes, setMesCollectes] = useState([]);
   const [corbeille, setCorbeille] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [maPosition, setMaPosition] = useState(null);
+
+  // Position du collecteur pour afficher la distance sur les cartes de la corbeille
+  useEffect(() => {
+    navigator.geolocation?.getCurrentPosition(
+      (pos) => setMaPosition({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      () => {},
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  }, []);
 
   useEffect(() => {
     const q = query(collection(db, "signalements"), where("status", "==", "disponible"));
@@ -98,13 +91,17 @@ export default function Collecteur({ utilisateur, mode, onChangeMode }) {
 
   const corbeilleIds = useMemo(() => new Set(corbeille.map(e => e.signalementId)), [corbeille]);
 
-  const ajouterCorbeille = (s) =>
-    setDoc(doc(db, "corbeilles", `${utilisateur.uid}_${s.id}`), {
+  const ajouterCorbeille = async (s) => {
+    await setDoc(doc(db, "corbeilles", `${utilisateur.uid}_${s.id}`), {
       collecteurId: utilisateur.uid, signalementId: s.id, addedAt: serverTimestamp()
     });
+    updateDoc(doc(db, "signalements", s.id), { corbeillesCount: increment(1) }).catch(() => {});
+  };
 
-  const retirerCorbeille = (signalementId) =>
-    deleteDoc(doc(db, "corbeilles", `${utilisateur.uid}_${signalementId}`));
+  const retirerCorbeille = async (signalementId) => {
+    await deleteDoc(doc(db, "corbeilles", `${utilisateur.uid}_${signalementId}`));
+    updateDoc(doc(db, "signalements", signalementId), { corbeillesCount: increment(-1) }).catch(() => {});
+  };
 
   // Les notifications WhatsApp partent du serveur : on n'envoie que l'id,
   // le contenu et le destinataire sont relus depuis Firestore côté API.
@@ -130,75 +127,6 @@ export default function Collecteur({ utilisateur, mode, onChangeMode }) {
   const corbeilleItems = corbeille
     .map(e => disponibles.find(s => s.id === e.signalementId))
     .filter(Boolean);
-
-  const Carte = ({ s, actions }) => {
-    const st = STATUS[s.status] || STATUS["disponible"];
-    return (
-      <div style={{
-        background: "white", borderRadius: 16, marginBottom: 12, overflow: "hidden",
-        boxShadow: s.urgent ? "0 0 0 2px #fca5a5, 0 4px 16px rgba(239,68,68,0.08)" : "0 2px 12px rgba(0,0,0,0.07)"
-      }}>
-        <div style={{ display: "flex" }}>
-          {/* Image */}
-          <div style={{ width: 100, minHeight: 120, flexShrink: 0, position: "relative", overflow: "hidden", background: "#f1f5f9" }}>
-            {s.photo ? (
-              <img src={s.photo} alt="poubelle" style={{ width: "100%", height: "100%", objectFit: "cover", position: "absolute", inset: 0 }} />
-            ) : (
-              <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: "linear-gradient(135deg, #f0fdf4, #dcfce7)" }}>
-                <span style={{ fontSize: 28, color: "#86efac" }}><FontAwesomeIcon icon={faTrash} /></span>
-                <span style={{ fontSize: 9, color: "#86efac", fontWeight: 600, marginTop: 4 }}>Pas de photo</span>
-              </div>
-            )}
-            {s.urgent && (
-              <div style={{ position: "absolute", top: 6, left: 6, background: "#ef4444", color: "white", fontSize: 9, fontWeight: 800, padding: "2px 6px", borderRadius: 6 }}>URGENT</div>
-            )}
-          </div>
-
-          {/* Infos */}
-          <div style={{ flex: 1, padding: "12px 14px", display: "flex", flexDirection: "column", gap: 5 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-              <div style={{ fontSize: 15, fontWeight: 800, color: "#0f172a" }}>{nomAffiche(s.nom)}</div>
-              <div style={{ fontSize: 10, color: "#94a3b8", whiteSpace: "nowrap", marginLeft: 6 }}><FontAwesomeIcon icon={faClock} style={{ marginRight: 3 }} />{timeAgo(s.createdAt)}</div>
-            </div>
-
-            <div style={{ fontSize: 12, color: "#16a34a", fontWeight: 700 }}>
-              <FontAwesomeIcon icon={faLocationDot} style={{ marginRight: 4 }} />{s.commune} <span style={{ color: "#94a3b8", fontWeight: 400 }}>— {s.quartier}</span>
-            </div>
-
-            <div style={{ fontSize: 11, color: "#475569" }}><FontAwesomeIcon icon={faTrash} style={{ marginRight: 4 }} />{s.type}</div>
-
-            {formatFCFA(s.prix) && (
-              <div style={{ fontSize: 15, fontWeight: 900, color: "#16a34a" }}><FontAwesomeIcon icon={faCoins} style={{ marginRight: 5 }} />{formatFCFA(s.prix)}</div>
-            )}
-
-            {s.uid && (
-              <div style={{ fontSize: 11, color: "#0f172a", fontWeight: 700 }}><FontAwesomeIcon icon={faPhone} style={{ marginRight: 4 }} />+{s.uid}</div>
-            )}
-
-            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 2 }}>
-              <span style={{ background: st.bg, color: st.text, border: `1px solid ${st.border}`, fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 20 }}>
-                {s.status}
-              </span>
-              <span style={{ background: "#f8fafc", color: "#475569", border: "1px solid #e2e8f0", fontSize: 10, padding: "2px 8px", borderRadius: 20 }}>
-                {s.volume}
-              </span>
-              {s.lat && (
-                <a href={`https://www.google.com/maps?q=${s.lat},${s.lng}`} target="_blank" rel="noreferrer" style={{ textDecoration: "none" }}>
-                  <span style={{ background: "#eff6ff", color: "#3b82f6", border: "1px solid #bfdbfe", fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 20 }}><FontAwesomeIcon icon={faMap} style={{ marginRight: 4 }} />GPS</span>
-                </a>
-              )}
-            </div>
-
-            {s.notes && <div style={{ fontSize: 11, color: "#94a3b8", fontStyle: "italic" }}><FontAwesomeIcon icon={faComment} style={{ marginRight: 4 }} />{s.notes}</div>}
-          </div>
-        </div>
-
-        <div style={{ borderTop: "1px solid #f1f5f9", padding: "10px 14px" }}>
-          {actions}
-        </div>
-      </div>
-    );
-  };
 
   if (loading) return (
     <div style={{ padding: 60, textAlign: "center", color: "#94a3b8" }}>
@@ -266,27 +194,30 @@ export default function Collecteur({ utilisateur, mode, onChangeMode }) {
               </div>
 
               {corbeilleItems.map(s => (
-                <Carte key={s.id} s={s} actions={
-                  <div style={{ display: "flex", gap: 8 }}>
-                    <button onClick={() => retirerCorbeille(s.id)} style={{
-                      flex: 1, padding: "11px", cursor: "pointer", fontWeight: 700, fontSize: 12,
-                      background: "#fff5f5", color: "#ef4444", border: "1px solid #fecaca", borderRadius: 12
-                    }}>
-                      <FontAwesomeIcon icon={faXmark} style={{ marginRight: 5 }} />Retirer
-                    </button>
-                    <button onClick={() => {
-                      if (window.confirm("Valider cette collecte ?\n\n📍 " + s.commune + " — " + s.quartier + "\n🗑️ " + s.type + " · " + s.volume + "\n\nLe ménage sera notifié et pourra suivre votre position.")) {
-                        valider(s);
-                      }
-                    }} style={{
-                      flex: 2, padding: "11px", cursor: "pointer", fontWeight: 800, fontSize: 13,
-                      background: "linear-gradient(135deg, #16a34a, #15803d)", color: "white",
-                      border: "none", borderRadius: 12, boxShadow: "0 3px 10px rgba(22,163,74,0.3)"
-                    }}>
-                      <FontAwesomeIcon icon={faCircleCheck} style={{ marginRight: 6 }} />Valider la collecte
-                    </button>
-                  </div>
-                } />
+                <CarteSignalement key={s.id} s={s} showPhone
+                  distance={maPosition && s.lat ? distanceKm(maPosition.lat, maPosition.lng, s.lat, s.lng) : null}
+                  actions={
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <button onClick={() => retirerCorbeille(s.id)} style={{
+                        flex: 1, padding: "11px", cursor: "pointer", fontWeight: 700, fontSize: 12,
+                        background: "white", color: "#64748b", border: "1px solid #e2e8f0", borderRadius: 12
+                      }}>
+                        <FontAwesomeIcon icon={faXmark} style={{ marginRight: 5 }} />Retirer
+                      </button>
+                      <button onClick={() => {
+                        if (window.confirm("Valider cette collecte ?\n\n📍 " + s.commune + " — " + s.quartier + "\n🗑️ " + s.type + " · " + s.volume + "\n\nLe ménage sera notifié et pourra suivre votre position.")) {
+                          valider(s);
+                        }
+                      }} style={{
+                        flex: 2, padding: "11px", cursor: "pointer", fontWeight: 800, fontSize: 13,
+                        background: "linear-gradient(135deg, #16a34a, #15803d)", color: "white",
+                        border: "none", borderRadius: 12, boxShadow: "0 3px 10px rgba(22,163,74,0.3)"
+                      }}>
+                        <FontAwesomeIcon icon={faCircleCheck} style={{ marginRight: 6 }} />
+                        {Number(s.prix) > 0 ? `Valider · ${Number(s.prix).toLocaleString("fr-FR")} F` : "Valider la collecte"}
+                      </button>
+                    </div>
+                  } />
               ))}
             </>
           )}
@@ -314,7 +245,7 @@ export default function Collecteur({ utilisateur, mode, onChangeMode }) {
           )}
 
           {mesCollectes.map(s => (
-            <Carte key={s.id} s={s} actions={
+            <CarteSignalement key={s.id} s={s} showPhone actions={
               s.status === "en cours" ? (
                 <button onClick={() => terminer(s.id)} style={{
                   width: "100%", padding: "11px", cursor: "pointer", fontWeight: 800, fontSize: 13,
@@ -323,11 +254,7 @@ export default function Collecteur({ utilisateur, mode, onChangeMode }) {
                 }}>
                   <FontAwesomeIcon icon={faCheck} style={{ marginRight: 6 }} />Marquer comme collecté
                 </button>
-              ) : (
-                <div style={{ fontSize: 12, color: "#94a3b8", textAlign: "center", padding: "4px 0" }}>
-                  {s.status === "collecté" ? <><FontAwesomeIcon icon={faCheck} style={{ marginRight: 5 }} />Collecte terminée</> : ""}
-                </div>
-              )
+              ) : null
             } />
           ))}
         </div>
