@@ -7,6 +7,7 @@ import Collecteur from "./pages/Collecteur";
 import Inscription from "./pages/Inscription";
 import Connexion from "./pages/Connexion";
 import Admin from "./pages/Admin";
+import CartePublique from "./components/CartePublique";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faTrash, faLocationDot, faClock, faMap, faTriangleExclamation, faXmark,
@@ -33,6 +34,7 @@ function SignalementsPublics({ onInscription }) {
   const [signalements, setSignalements] = useState([]);
   const [filtreCommune, setFiltreCommune] = useState("");
   const [filtreUrgent, setFiltreUrgent] = useState(false);
+  const [vue, setVue] = useState("liste");
 
   useEffect(() => {
     const q = query(collection(db, "signalements"), where("status", "==", "disponible"));
@@ -68,6 +70,25 @@ function SignalementsPublics({ onInscription }) {
         </div>
       </div>
 
+      {/* Toggle Liste / Carte */}
+      <div style={{ display: "flex", gap: 4, marginBottom: 12, background: "#e2e8f0", borderRadius: 12, padding: 4 }}>
+        {[
+          { key: "liste", icon: faClipboardList, label: "Liste" },
+          { key: "carte", icon: faMap, label: "Carte" },
+        ].map(v => (
+          <button key={v.key} onClick={() => setVue(v.key)} style={{
+            flex: 1, padding: "9px", borderRadius: 9, border: "none", cursor: "pointer",
+            fontWeight: 800, fontSize: 12,
+            background: vue === v.key ? "white" : "transparent",
+            color: vue === v.key ? "#14532d" : "#64748b",
+            boxShadow: vue === v.key ? "0 1px 4px rgba(0,0,0,0.12)" : "none",
+            transition: "all 0.15s"
+          }}>
+            <FontAwesomeIcon icon={v.icon} style={{ marginRight: 6 }} />{v.label}
+          </button>
+        ))}
+      </div>
+
       {/* Filtres */}
       <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
         <select value={filtreCommune} onChange={e => setFiltreCommune(e.target.value)} style={{
@@ -98,15 +119,20 @@ function SignalementsPublics({ onInscription }) {
         )}
       </div>
 
-      {/* Cartes */}
-      {filtres.length === 0 && (
+      {/* Vue carte (positions approximatives) */}
+      {vue === "carte" && (
+        <CartePublique signalements={filtres} onInscription={onInscription} />
+      )}
+
+      {/* Vue liste */}
+      {vue === "liste" && filtres.length === 0 && (
         <div style={{ textAlign: "center", padding: "40px 20px", color: "#94a3b8", fontSize: 13 }}>
           <div style={{ fontSize: 40, marginBottom: 8 }}><FontAwesomeIcon icon={faTrash} /></div>
           Aucun signalement pour ce filtre
         </div>
       )}
 
-      {filtres.map(s => (
+      {vue === "liste" && filtres.map(s => (
         <div key={s.id} style={{
           background: "white", borderRadius: 16, marginBottom: 12, overflow: "hidden",
           boxShadow: s.urgent
@@ -162,15 +188,6 @@ function SignalementsPublics({ onInscription }) {
                 }}>
                   {s.volume}
                 </span>
-                {s.lat && (
-                  <a href={`https://www.google.com/maps?q=${s.lat},${s.lng}`} target="_blank" rel="noreferrer"
-                    style={{ textDecoration: "none" }}>
-                    <span style={{
-                      background: "#eff6ff", color: "#3b82f6", border: "1px solid #bfdbfe",
-                      fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 20
-                    }}><FontAwesomeIcon icon={faMap} style={{ marginRight: 4 }} />GPS</span>
-                  </a>
-                )}
               </div>
             </div>
           </div>
