@@ -236,6 +236,7 @@ export default function Collecteur({ utilisateur, mode, onChangeMode }) {
           onRetirer={retirerCorbeille}
           nbCorbeille={corbeilleItems.length}
           onVoirCorbeille={() => onChangeMode?.("corbeille")}
+          utilisateur={utilisateur}
         />
       )}
 

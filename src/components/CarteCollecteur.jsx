@@ -3,6 +3,8 @@
 
 import { useState, useEffect } from "react";
 import { MapContainer, TileLayer, Marker, Popup, Circle, useMap } from "react-leaflet";
+import { doc, setDoc, serverTimestamp } from "firebase/firestore";
+import { db } from "../firebase/config";
 import { COMMUNES, COMMUNES_COORDS, ABIDJAN_CENTER } from "../quartiers";
 import { distanceKm, formatDistance } from "../utils/geo";
 import { formatFCFA } from "../utils/format";
@@ -58,7 +60,7 @@ const eclaterPositions = (signalements) => {
   return resultat;
 };
 
-export default function CarteCollecteur({ signalements, corbeilleIds, onAjouter, onRetirer, nbCorbeille, onVoirCorbeille }) {
+export default function CarteCollecteur({ signalements, corbeilleIds, onAjouter, onRetirer, nbCorbeille, onVoirCorbeille, utilisateur }) {
   const [maPosition, setMaPosition] = useState(null);
   const [gpsErreur, setGpsErreur] = useState(() => !("geolocation" in navigator));
   const [commune, setCommune] = useState("");
@@ -78,6 +80,19 @@ export default function CarteCollecteur({ signalements, corbeilleIds, onAjouter,
 
   useEffect(() => { localiser(); }, []);
   useEffect(() => { localStorage.setItem("rayonKm", rayon); }, [rayon]);
+
+  // Mémorise la dernière position GPS + rayon du collecteur dans son profil,
+  // pour que le serveur puisse le notifier des signalements proches (WhatsApp).
+  useEffect(() => {
+    if (!utilisateur?.uid || !maPosition) return;
+    const t = setTimeout(() => {
+      setDoc(doc(db, "utilisateurs", utilisateur.uid), {
+        lastLat: maPosition.lat, lastLng: maPosition.lng,
+        rayonKm: rayon, lastPositionAt: serverTimestamp(),
+      }, { merge: true }).catch(() => {});
+    }, 1500);
+    return () => clearTimeout(t);
+  }, [utilisateur?.uid, maPosition, rayon]);
 
   const centre = commune ? COMMUNES_COORDS[commune] : (maPosition || ABIDJAN_CENTER);
   const avecGps = eclaterPositions(signalements.filter(s => s.lat && s.lng));

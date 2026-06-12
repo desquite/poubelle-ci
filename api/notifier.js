@@ -1,7 +1,11 @@
 // Notification WhatsApp aux collecteurs de la zone lors d'un nouveau signalement.
 // Le client n'envoie que l'id : les données sont relues depuis Firestore.
 
-import { db, envoyerWhatsApp } from "./_firebase.js";
+import { db, envoyerWhatsApp, distanceKm } from "./_firebase.js";
+
+// Un collecteur est notifié s'il est physiquement dans son rayon autour du
+// signalement (position vue récemment), sinon on retombe sur sa commune.
+const POSITION_MAX_AGE_MS = 14 * 24 * 3600 * 1000;
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -22,12 +26,22 @@ export default async function handler(req, res) {
 
     const snapshot = await db.collection("utilisateurs")
       .where("role", "==", "collecteur")
-      .where("commune", "==", commune)
       .get();
 
+    const now = Date.now();
     const collecteurs = snapshot.docs
       .map(doc => doc.data())
-      .filter(c => c.quartier === quartier || c.commune === commune);
+      .filter(c => {
+        if (!c.telephone) return false;
+        const posAt = c.lastPositionAt?.toMillis ? c.lastPositionAt.toMillis() : 0;
+        const positionRecente = c.lastLat != null && c.lastLng != null && posAt && (now - posAt) < POSITION_MAX_AGE_MS;
+        // Proximité réelle si on connaît sa position récente et que le signalement est géolocalisé
+        if (lat && lng && positionRecente) {
+          return distanceKm(lat, lng, c.lastLat, c.lastLng) <= (c.rayonKm || 1);
+        }
+        // Repli : collecteurs de la même commune (jamais ouvert la carte, ou position trop ancienne)
+        return c.commune === commune;
+      });
 
     const prixTexte = Number(prix) > 0 ? `\n💰 *${Number(prix).toLocaleString("fr-FR")} FCFA*` : "";
     const message = `🗑️ *Nouveau signalement - Poubelle-CI*\n\n📍 *${commune} — ${quartier}*\n👤 ${nom}\n🗑️ ${type} · ${volume}${prixTexte}${urgent ? "\n🔴 URGENT !" : ""}${lat ? `\n\n🗺️ Localisation : https://www.google.com/maps?q=${lat},${lng}` : ""}\n\n👉 Connectez-vous pour accepter !\npoubelle-ci.vercel.app`;
