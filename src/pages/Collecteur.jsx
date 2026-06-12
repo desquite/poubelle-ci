@@ -2,10 +2,11 @@ import { useState, useEffect, useMemo } from "react";
 import { collection, onSnapshot, doc, updateDoc, query, where, setDoc, deleteDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "../firebase/config";
 import CarteCollecteur from "../components/CarteCollecteur";
+import { formatFCFA } from "../utils/format";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faTrash, faLocationDot, faClock, faMap, faXmark,
-  faTruck, faCheck, faPhone, faComment, faBasketShopping, faCircleCheck
+  faTruck, faCheck, faPhone, faComment, faBasketShopping, faCircleCheck, faCoins
 } from "@fortawesome/free-solid-svg-icons";
 
 const nomAffiche = (nom) => nom?.trim().split(/\s+/).pop() || nom || "";
@@ -165,6 +166,10 @@ export default function Collecteur({ utilisateur, mode, onChangeMode }) {
             </div>
 
             <div style={{ fontSize: 11, color: "#475569" }}><FontAwesomeIcon icon={faTrash} style={{ marginRight: 4 }} />{s.type}</div>
+
+            {formatFCFA(s.prix) && (
+              <div style={{ fontSize: 15, fontWeight: 900, color: "#16a34a" }}><FontAwesomeIcon icon={faCoins} style={{ marginRight: 5 }} />{formatFCFA(s.prix)}</div>
+            )}
 
             {s.uid && (
               <div style={{ fontSize: 11, color: "#0f172a", fontWeight: 700 }}><FontAwesomeIcon icon={faPhone} style={{ marginRight: 4 }} />+{s.uid}</div>

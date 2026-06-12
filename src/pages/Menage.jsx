@@ -2,12 +2,13 @@ import { useState, useEffect } from "react";
 import { collection, addDoc, serverTimestamp, query, where, onSnapshot, deleteDoc, doc } from "firebase/firestore";
 import { db } from "../firebase/config";
 import { COMMUNES_QUARTIERS, COMMUNES } from "../quartiers";
+import { formatFCFA } from "../utils/format";
 import SuiviCollecte from "../components/SuiviCollecte";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faTrash, faLocationDot, faClock, faMap, faTriangleExclamation,
   faBox, faCheck, faClipboardList, faSatelliteDish, faCamera,
-  faCircleCheck, faTruck
+  faCircleCheck, faTruck, faCoins
 } from "@fortawesome/free-solid-svg-icons";
 
 const WASTE_TYPES = ["Ordures ménagères", "Encombrants", "Déchets recyclables", "Déchets organiques"];
@@ -46,7 +47,7 @@ export default function Menage({ utilisateur, mode }) {
   const [form, setForm] = useState({
     nom: utilisateur?.nom || "", commune: utilisateur?.commune || "",
     quartier: utilisateur?.quartier || "", adresse: "",
-    type: "", volume: "", notes: "", urgent: false, lat: null, lng: null, photo: null,
+    type: "", volume: "", prix: "", notes: "", urgent: false, lat: null, lng: null, photo: null,
   });
   const [gpsLoading, setGpsLoading] = useState(false);
   const [gpsOk, setGpsOk] = useState(false);
@@ -97,13 +98,13 @@ export default function Menage({ utilisateur, mode }) {
   };
 
   const handleSubmit = async () => {
-    if (!form.commune || !form.quartier || !form.type || !form.volume || !form.lat) return;
+    if (!form.commune || !form.quartier || !form.type || !form.volume || !form.prix || !form.lat) return;
     setLoading(true);
     try {
-      const ref = await addDoc(collection(db, "signalements"), { ...form, uid: utilisateur.uid, status: "disponible", createdAt: serverTimestamp() });
+      const ref = await addDoc(collection(db, "signalements"), { ...form, prix: Number(form.prix), uid: utilisateur.uid, status: "disponible", createdAt: serverTimestamp() });
       await fetch("/api/notifier", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ signalementId: ref.id }) });
       setStep(3);
-      setForm({ nom: utilisateur?.nom || "", commune: utilisateur?.commune || "", quartier: utilisateur?.quartier || "", adresse: "", type: "", volume: "", notes: "", urgent: false, lat: null, lng: null, photo: null });
+      setForm({ nom: utilisateur?.nom || "", commune: utilisateur?.commune || "", quartier: utilisateur?.quartier || "", adresse: "", type: "", volume: "", prix: "", notes: "", urgent: false, lat: null, lng: null, photo: null });
       setGpsOk(false);
       setPhotoPreview(null);
     } catch (e) { alert("Erreur : " + e.message); }
@@ -171,6 +172,7 @@ export default function Menage({ utilisateur, mode }) {
                 <div style={{ fontSize: 12, color: "#16a34a", fontWeight: 700 }}>
                   <FontAwesomeIcon icon={faLocationDot} style={{ marginRight: 4 }} />{s.commune} <span style={{ color: "#94a3b8", fontWeight: 400 }}>— {s.quartier}</span>
                 </div>
+                {formatFCFA(s.prix) && <div style={{ fontSize: 14, fontWeight: 800, color: "#0f172a" }}><FontAwesomeIcon icon={faCoins} style={{ marginRight: 5, color: "#16a34a" }} />{formatFCFA(s.prix)}</div>}
                 <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 2 }}>
                   <span style={{ background: st.bg, color: st.text, border: `1px solid ${st.border}`, fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 20 }}>{s.status}</span>
                   <span style={{ background: "#f8fafc", color: "#475569", border: "1px solid #e2e8f0", fontSize: 10, padding: "2px 8px", borderRadius: 20 }}>{s.volume}</span>
@@ -339,6 +341,24 @@ export default function Menage({ utilisateur, mode }) {
             {VOLUMES.map(v => <option key={v}>{v}</option>)}
           </select>
 
+          <label style={lbl}>Prix proposé (FCFA)</label>
+          <div style={{ position: "relative", marginBottom: 12 }}>
+            <input type="number" inputMode="numeric" min="0" step="500"
+              value={form.prix} onChange={e => setForm({...form, prix: e.target.value})}
+              placeholder="Ex: 2000" style={{ ...inp, marginBottom: 0, paddingRight: 56 }} />
+            <span style={{ position: "absolute", right: 14, top: "50%", transform: "translateY(-50%)", fontSize: 12, fontWeight: 700, color: "#16a34a" }}>FCFA</span>
+          </div>
+          <div style={{ display: "flex", gap: 6, marginBottom: 12, flexWrap: "wrap" }}>
+            {[1000, 2000, 3000, 5000].map(p => (
+              <button key={p} type="button" onClick={() => setForm({...form, prix: String(p)})} style={{
+                flex: 1, minWidth: 64, padding: "7px 4px", borderRadius: 10, cursor: "pointer", fontSize: 12, fontWeight: 700,
+                border: Number(form.prix) === p ? "1.5px solid #16a34a" : "1.5px solid #e2e8f0",
+                background: Number(form.prix) === p ? "#f0fdf4" : "white",
+                color: Number(form.prix) === p ? "#16a34a" : "#64748b"
+              }}>{p.toLocaleString("fr-FR")}</button>
+            ))}
+          </div>
+
           <label style={lbl}>Note pour le collecteur (optionnel)</label>
           <textarea value={form.notes} onChange={e => setForm({...form, notes: e.target.value})}
             placeholder="Ex: Sonner à la porte verte..." rows={3} style={{...inp, resize: "none"}} />
@@ -378,6 +398,7 @@ export default function Menage({ utilisateur, mode }) {
           <div style={{ background: "#f0fdf4", borderRadius: 12, padding: "12px 14px", marginBottom: 16, border: "1px solid #bbf7d0" }}>
             <div style={{ fontSize: 12, fontWeight: 700, color: "#16a34a" }}><FontAwesomeIcon icon={faLocationDot} style={{ marginRight: 4 }} />{form.commune} — {form.quartier}</div>
             {form.adresse && <div style={{ fontSize: 11, color: "#475569", marginTop: 2 }}>{form.adresse}</div>}
+            {Number(form.prix) > 0 && <div style={{ fontSize: 14, fontWeight: 800, color: "#0f172a", marginTop: 4 }}><FontAwesomeIcon icon={faCoins} style={{ marginRight: 5, color: "#16a34a" }} />{Number(form.prix).toLocaleString("fr-FR")} FCFA</div>}
             <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
               {gpsOk && <span style={{ fontSize: 10, background: "#dcfce7", color: "#16a34a", padding: "2px 8px", borderRadius: 20, fontWeight: 600 }}><FontAwesomeIcon icon={faCheck} style={{ marginRight: 3 }} />GPS</span>}
               {form.photo && <span style={{ fontSize: 10, background: "#dcfce7", color: "#16a34a", padding: "2px 8px", borderRadius: 20, fontWeight: 600 }}><FontAwesomeIcon icon={faCamera} style={{ marginRight: 3 }} />Photo</span>}
@@ -388,11 +409,11 @@ export default function Menage({ utilisateur, mode }) {
             <button onClick={() => setStep(1)} style={{ flex: 1, padding: "13px", background: "#f8fafc", color: "#64748b", border: "1.5px solid #e2e8f0", borderRadius: 12, fontWeight: 700, cursor: "pointer", fontSize: 13 }}>
               ← Retour
             </button>
-            <button onClick={handleSubmit} disabled={!form.type || !form.volume || loading || photoUploading} style={{
+            <button onClick={handleSubmit} disabled={!form.type || !form.volume || !form.prix || loading || photoUploading} style={{
               flex: 2, padding: "13px", borderRadius: 12, fontWeight: 800, cursor: "pointer", fontSize: 13, border: "none",
-              background: (!form.type || !form.volume) ? "#e2e8f0" : "linear-gradient(135deg, #16a34a, #15803d)",
-              color: (!form.type || !form.volume) ? "#94a3b8" : "white",
-              boxShadow: (!form.type || !form.volume) ? "none" : "0 3px 10px rgba(22,163,74,0.3)"
+              background: (!form.type || !form.volume || !form.prix) ? "#e2e8f0" : "linear-gradient(135deg, #16a34a, #15803d)",
+              color: (!form.type || !form.volume || !form.prix) ? "#94a3b8" : "white",
+              boxShadow: (!form.type || !form.volume || !form.prix) ? "none" : "0 3px 10px rgba(22,163,74,0.3)"
             }}>
               {loading ? "Envoi..." : <><FontAwesomeIcon icon={faCheck} style={{ marginRight: 6 }} />Envoyer</>}
             </button>

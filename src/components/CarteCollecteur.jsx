@@ -5,10 +5,11 @@ import { useState, useEffect } from "react";
 import { MapContainer, TileLayer, Marker, Popup, Circle, useMap } from "react-leaflet";
 import { COMMUNES, COMMUNES_COORDS, ABIDJAN_CENTER } from "../quartiers";
 import { distanceKm, formatDistance } from "../utils/geo";
+import { formatFCFA } from "../utils/format";
 import { iconPoubelle, iconPoubelleUrgente, iconPoubelleCorbeille, iconCamion } from "./mapIcons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-  faLocationDot, faPlus, faXmark, faBasketShopping, faLocationCrosshairs, faTrash, faClock
+  faLocationDot, faPlus, faXmark, faBasketShopping, faLocationCrosshairs, faTrash, faClock, faCoins
 } from "@fortawesome/free-solid-svg-icons";
 
 const timeAgo = (timestamp) => {
@@ -177,6 +178,11 @@ export default function CarteCollecteur({ signalements, corbeilleIds, onAjouter,
                       <FontAwesomeIcon icon={faLocationDot} style={{ marginRight: 4 }} />{s.commune} — {s.quartier}
                     </div>
                     <div style={{ fontSize: 11, color: "#475569", marginBottom: 2 }}>{s.type} · {s.volume}</div>
+                    {formatFCFA(s.prix) && (
+                      <div style={{ fontSize: 15, fontWeight: 900, color: "#16a34a", marginBottom: 4 }}>
+                        <FontAwesomeIcon icon={faCoins} style={{ marginRight: 5 }} />{formatFCFA(s.prix)}
+                      </div>
+                    )}
                     <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 8 }}>
                       <FontAwesomeIcon icon={faClock} style={{ marginRight: 4 }} />{timeAgo(s.createdAt)} · à {formatDistance(d)}
                     </div>

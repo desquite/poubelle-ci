@@ -18,7 +18,7 @@ export default async function handler(req, res) {
     const s = snap.data();
     if (s.status !== "disponible") return res.status(400).json({ error: "Signalement non disponible" });
 
-    const { commune, quartier, nom, type, volume, urgent, lat, lng } = s;
+    const { commune, quartier, nom, type, volume, prix, urgent, lat, lng } = s;
 
     const snapshot = await db.collection("utilisateurs")
       .where("role", "==", "collecteur")
@@ -29,7 +29,8 @@ export default async function handler(req, res) {
       .map(doc => doc.data())
       .filter(c => c.quartier === quartier || c.commune === commune);
 
-    const message = `🗑️ *Nouveau signalement - Poubelle-CI*\n\n📍 *${commune} — ${quartier}*\n👤 ${nom}\n🗑️ ${type} · ${volume}${urgent ? "\n🔴 URGENT !" : ""}${lat ? `\n\n🗺️ Localisation : https://www.google.com/maps?q=${lat},${lng}` : ""}\n\n👉 Connectez-vous pour accepter !\npoubelle-ci.vercel.app`;
+    const prixTexte = Number(prix) > 0 ? `\n💰 *${Number(prix).toLocaleString("fr-FR")} FCFA*` : "";
+    const message = `🗑️ *Nouveau signalement - Poubelle-CI*\n\n📍 *${commune} — ${quartier}*\n👤 ${nom}\n🗑️ ${type} · ${volume}${prixTexte}${urgent ? "\n🔴 URGENT !" : ""}${lat ? `\n\n🗺️ Localisation : https://www.google.com/maps?q=${lat},${lng}` : ""}\n\n👉 Connectez-vous pour accepter !\npoubelle-ci.vercel.app`;
 
     await Promise.all(collecteurs.map(c => envoyerWhatsApp(c.telephone, message)));
 

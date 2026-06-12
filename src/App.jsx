@@ -8,12 +8,13 @@ import Inscription from "./pages/Inscription";
 import Connexion from "./pages/Connexion";
 import Admin from "./pages/Admin";
 import CartePublique from "./components/CartePublique";
+import { formatFCFA } from "./utils/format";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faTrash, faLocationDot, faClock, faMap, faTriangleExclamation, faXmark,
   faTruck, faHouse, faBox, faChartBar, faUsers, faClipboardList,
   faLock, faUserPlus, faMobileScreen, faGlobe, faCircleCheck, faChevronRight, faArrowLeft,
-  faBasketShopping
+  faBasketShopping, faCoins
 } from "@fortawesome/free-solid-svg-icons";
 
 const nomAffiche = (nom) => nom?.trim().split(/\s+/).pop() || nom || "";
@@ -180,6 +181,12 @@ function SignalementsPublics({ onInscription }) {
               <div style={{ fontSize: 11, color: "#475569" }}>
                 <FontAwesomeIcon icon={faTrash} style={{ marginRight: 4 }} />{s.type}
               </div>
+
+              {formatFCFA(s.prix) && (
+                <div style={{ fontSize: 14, fontWeight: 900, color: "#16a34a" }}>
+                  <FontAwesomeIcon icon={faCoins} style={{ marginRight: 5 }} />{formatFCFA(s.prix)}
+                </div>
+              )}
 
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 2 }}>
                 <span style={{

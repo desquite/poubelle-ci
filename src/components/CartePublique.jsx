@@ -6,8 +6,9 @@ import { useEffect, useRef } from "react";
 import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import { ABIDJAN_CENTER } from "../quartiers";
 import { iconPoubelle, iconPoubelleUrgente } from "./mapIcons";
+import { formatFCFA } from "../utils/format";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faLocationDot, faClock, faUserPlus, faTrash } from "@fortawesome/free-solid-svg-icons";
+import { faLocationDot, faClock, faUserPlus, faTrash, faCoins } from "@fortawesome/free-solid-svg-icons";
 
 const timeAgo = (timestamp) => {
   if (!timestamp?.seconds) return "";
@@ -84,6 +85,11 @@ export default function CartePublique({ signalements, onInscription }) {
                   <div style={{ fontSize: 11, color: "#475569", marginBottom: 2 }}>
                     <FontAwesomeIcon icon={faTrash} style={{ marginRight: 4 }} />{s.type} · {s.volume}
                   </div>
+                  {formatFCFA(s.prix) && (
+                    <div style={{ fontSize: 14, fontWeight: 900, color: "#16a34a", marginBottom: 2 }}>
+                      <FontAwesomeIcon icon={faCoins} style={{ marginRight: 5 }} />{formatFCFA(s.prix)}
+                    </div>
+                  )}
                   <div style={{ fontSize: 10, color: "#94a3b8", marginBottom: 8 }}>
                     <FontAwesomeIcon icon={faClock} style={{ marginRight: 4 }} />{timeAgo(s.createdAt)} · Position approximative
                   </div>
