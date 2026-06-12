@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { collection, addDoc, serverTimestamp, query, where, onSnapshot, deleteDoc, doc } from "firebase/firestore";
 import { db } from "../firebase/config";
-import { COMMUNES_QUARTIERS, COMMUNES } from "../quartiers";
+import { COMMUNES_QUARTIERS, COMMUNES, COMMUNES_COORDS } from "../quartiers";
+import { distanceKm } from "../utils/geo";
 import SuiviCollecte from "../components/SuiviCollecte";
 import CarteSignalement from "../components/CarteSignalement";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -35,6 +36,7 @@ export default function Menage({ utilisateur, mode }) {
   });
   const [gpsLoading, setGpsLoading] = useState(false);
   const [gpsOk, setGpsOk] = useState(false);
+  const [ignorerAlerteCommune, setIgnorerAlerteCommune] = useState(false);
   const [photoPreview, setPhotoPreview] = useState(null);
   const [photoUploading, setPhotoUploading] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -64,10 +66,30 @@ export default function Menage({ utilisateur, mode }) {
     if (!navigator.geolocation) { alert("GPS non disponible"); return; }
     setGpsLoading(true);
     navigator.geolocation.getCurrentPosition(
-      (pos) => { setForm({ ...form, lat: pos.coords.latitude, lng: pos.coords.longitude }); setGpsOk(true); setGpsLoading(false); },
+      (pos) => {
+        setForm({ ...form, lat: pos.coords.latitude, lng: pos.coords.longitude });
+        setGpsOk(true);
+        setGpsLoading(false);
+        setIgnorerAlerteCommune(false);
+      },
       () => { alert("Impossible d'obtenir votre position."); setGpsLoading(false); }
     );
   };
+
+  // Cohérence commune déclarée ↔ position GPS : si le GPS est manifestement
+  // loin de la commune choisie (> 4 km de son centre), on suggère la commune
+  // la plus proche — l'utilisateur tranche.
+  const communeSuggeree = (() => {
+    if (!form.lat || !form.commune || ignorerAlerteCommune) return null;
+    const declaree = COMMUNES_COORDS[form.commune];
+    if (!declaree || distanceKm(form.lat, form.lng, declaree.lat, declaree.lng) <= 4) return null;
+    let plusProche = null, dMin = Infinity;
+    Object.entries(COMMUNES_COORDS).forEach(([c, p]) => {
+      const d = distanceKm(form.lat, form.lng, p.lat, p.lng);
+      if (d < dMin) { dMin = d; plusProche = c; }
+    });
+    return plusProche !== form.commune ? plusProche : null;
+  })();
 
   const handlePhoto = async (e) => {
     const file = e.target.files[0];
@@ -245,6 +267,33 @@ export default function Menage({ utilisateur, mode }) {
             </div>
           )}
           {gpsOk && <div style={{ marginBottom: 16 }} />}
+
+          {/* Alerte de cohérence commune ↔ GPS */}
+          {communeSuggeree && (
+            <div style={{
+              background: "#fffbeb", border: "1.5px solid #fde68a", borderRadius: 12,
+              padding: "12px 14px", marginBottom: 16
+            }}>
+              <div style={{ fontSize: 12, color: "#92400e", fontWeight: 600, marginBottom: 10, lineHeight: 1.5 }}>
+                <FontAwesomeIcon icon={faTriangleExclamation} style={{ marginRight: 6 }} />
+                Votre position GPS semble être à <strong>{communeSuggeree}</strong>, mais vous avez choisi <strong>{form.commune}</strong>.
+              </div>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button onClick={() => setForm({ ...form, commune: communeSuggeree, quartier: "" })} style={{
+                  flex: 1, padding: "10px 8px", borderRadius: 10, cursor: "pointer", fontWeight: 800, fontSize: 12,
+                  border: "none", background: "linear-gradient(135deg, #16a34a, #15803d)", color: "white"
+                }}>
+                  Utiliser {communeSuggeree}
+                </button>
+                <button onClick={() => setIgnorerAlerteCommune(true)} style={{
+                  flex: 1, padding: "10px 8px", borderRadius: 10, cursor: "pointer", fontWeight: 700, fontSize: 12,
+                  border: "1.5px solid #fde68a", background: "white", color: "#92400e"
+                }}>
+                  Garder {form.commune}
+                </button>
+              </div>
+            </div>
+          )}
 
           <div style={{ display: "flex", gap: 10 }}>
             <button onClick={() => setStep(0)} style={{ flex: 1, padding: "13px", background: "#f8fafc", color: "#64748b", border: "1.5px solid #e2e8f0", borderRadius: 12, fontWeight: 700, cursor: "pointer", fontSize: 13 }}>
