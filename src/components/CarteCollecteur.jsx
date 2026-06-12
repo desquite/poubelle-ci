@@ -98,6 +98,9 @@ export default function CarteCollecteur({ signalements, corbeilleIds, onAjouter,
   const avecGps = eclaterPositions(signalements.filter(s => s.lat && s.lng));
   const nbDansRayon = avecGps.filter(s => distanceKm(centre.lat, centre.lng, s.lat, s.lng) <= rayon).length;
 
+  const nbParCommune = {};
+  signalements.forEach(s => { if (s.commune) nbParCommune[s.commune] = (nbParCommune[s.commune] || 0) + 1; });
+
   return (
     <div>
       {/* Contrôles : commune + rayon */}
@@ -111,7 +114,7 @@ export default function CarteCollecteur({ signalements, corbeilleIds, onAjouter,
             fontSize: 12, color: "#0f172a", background: "white", outline: "none", fontWeight: 600
           }}>
             <option value="">Autour de ma position</option>
-            {COMMUNES.map(c => <option key={c} value={c}>{c}</option>)}
+            {COMMUNES.map(c => <option key={c} value={c}>{c}{nbParCommune[c] ? ` (${nbParCommune[c]})` : ""}</option>)}
           </select>
           <button onClick={() => { setCommune(""); localiser(); }} title="Me localiser" style={{
             padding: "9px 13px", borderRadius: 12, border: "1.5px solid #bbf7d0",

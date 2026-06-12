@@ -42,6 +42,9 @@ function SignalementsPublics({ onInscription }) {
     .filter(s => filtreCommune ? s.commune === filtreCommune : true)
     .filter(s => filtreUrgent ? s.urgent : true);
 
+  const nbParCommune = {};
+  signalements.forEach(s => { if (s.commune) nbParCommune[s.commune] = (nbParCommune[s.commune] || 0) + 1; });
+
   return (
     <div style={{ padding: "0 16px 32px" }}>
 
@@ -88,8 +91,8 @@ function SignalementsPublics({ onInscription }) {
           background: "white", outline: "none", fontWeight: 600,
           boxShadow: "0 1px 3px rgba(0,0,0,0.06)"
         }}>
-          <option value="">Toutes les communes</option>
-          {communesDisponibles.map(c => <option key={c} value={c}>{c}</option>)}
+          <option value="">Toutes les communes ({signalements.length})</option>
+          {communesDisponibles.map(c => <option key={c} value={c}>{c} ({nbParCommune[c]})</option>)}
         </select>
 
         <button onClick={() => setFiltreUrgent(!filtreUrgent)} style={{
