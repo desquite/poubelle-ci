@@ -4,7 +4,7 @@
 
 import { useEffect, useRef } from "react";
 import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
-import { ABIDJAN_CENTER } from "../quartiers";
+import { ABIDJAN_CENTER, COMMUNES_COORDS } from "../quartiers";
 import { iconPoubelle, iconPoubelleUrgente } from "./mapIcons";
 import { formatFCFA } from "../utils/format";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -37,22 +37,58 @@ const positionApproximative = (s) => {
   };
 };
 
-function Cadrer({ points }) {
+function Cadrer({ commune, points }) {
   const map = useMap();
-  const fait = useRef(false);
+  const initFait = useRef(false);
+  const prevCommune = useRef("");
+  const pointsRef = useRef(points);
+  useEffect(() => { pointsRef.current = points; }, [points]);
+
+  // Cadrage initial sur l'ensemble des signalements (une seule fois)
   useEffect(() => {
-    if (!points.length || fait.current) return;
-    fait.current = true;
+    if (initFait.current || commune || !points.length) return;
+    initFait.current = true;
     if (points.length === 1) {
       map.setView([points[0].aLat, points[0].aLng], 14);
     } else {
       map.fitBounds(points.map(p => [p.aLat, p.aLng]), { padding: [50, 50], maxZoom: 15 });
     }
-  }, [points, map]);
+  }, [points, commune, map]);
+
+  // Vol animé quand le filtre commune change (même effet que la carte du
+  // collecteur) : cadre les signalements de la commune, ou son centre s'il
+  // n'y en a aucun ; retour à la vue d'ensemble quand le filtre est retiré.
+  useEffect(() => {
+    const pts = pointsRef.current;
+    const volerVersPoints = () => {
+      if (pts.length > 1) {
+        map.flyToBounds(pts.map(p => [p.aLat, p.aLng]), { padding: [50, 50], maxZoom: 15 });
+      } else if (pts.length === 1) {
+        map.flyTo([pts[0].aLat, pts[0].aLng], 14);
+      }
+    };
+
+    if (commune && COMMUNES_COORDS[commune]) {
+      initFait.current = true;
+      if (pts.length) {
+        volerVersPoints();
+      } else {
+        map.flyTo([COMMUNES_COORDS[commune].lat, COMMUNES_COORDS[commune].lng], 12.5);
+      }
+    } else if (prevCommune.current && !commune) {
+      if (pts.length) {
+        volerVersPoints();
+      } else {
+        map.flyTo([ABIDJAN_CENTER.lat, ABIDJAN_CENTER.lng], 11);
+      }
+    }
+    prevCommune.current = commune;
+  }, [commune, map]);
+
   return null;
 }
 
-export default function CartePublique({ signalements, onInscription }) {
+export default function CartePublique({ signalements, commune, onInscription }) {
   const points = signalements
     .filter(s => s.lat && s.lng)
     .map(s => ({ ...s, ...positionApproximative(s) }));
@@ -67,7 +103,7 @@ export default function CartePublique({ signalements, onInscription }) {
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
             maxZoom={21} maxNativeZoom={19}
           />
-          <Cadrer points={points} />
+          <Cadrer commune={commune} points={points} />
 
           {points.map(s => (
             <Marker key={s.id} position={[s.aLat, s.aLng]} icon={s.urgent ? iconPoubelleUrgente : iconPoubelle}>

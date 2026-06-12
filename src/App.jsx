@@ -112,7 +112,7 @@ function SignalementsPublics({ onInscription }) {
 
       {/* Vue carte (positions approximatives) */}
       {vue === "carte" && (
-        <CartePublique signalements={filtres} onInscription={onInscription} />
+        <CartePublique signalements={filtres} commune={filtreCommune} onInscription={onInscription} />
       )}
 
       {/* Vue liste */}
