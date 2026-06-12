@@ -226,6 +226,7 @@ export default function App() {
   const [mode, setMode] = useState("dashboard");
   const [ecran, setEcran] = useState("accueil");
   const [utilisateur, setUtilisateur] = useState(null);
+  const [authChecked, setAuthChecked] = useState(false);
   const [installPrompt, setInstallPrompt] = useState(null);
   const [showInstall, setShowInstall] = useState(false);
 
@@ -237,14 +238,18 @@ export default function App() {
     });
 
     const unsub = onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        const snap = await getDoc(doc(db, "utilisateurs", user.uid));
-        if (snap.exists()) {
-          const userData = { uid: user.uid, ...snap.data() };
-          setUtilisateur(userData);
-          setMode(userData.role === "admin" ? "dashboard" : userData.role === "menage" ? "menage" : "carte");
-          setEcran("app");
+      try {
+        if (user) {
+          const snap = await getDoc(doc(db, "utilisateurs", user.uid));
+          if (snap.exists()) {
+            const userData = { uid: user.uid, ...snap.data() };
+            setUtilisateur(userData);
+            setMode(userData.role === "admin" ? "dashboard" : userData.role === "menage" ? "menage" : "carte");
+            setEcran("app");
+          }
         }
+      } finally {
+        setAuthChecked(true);
       }
     });
     return () => unsub();
@@ -359,6 +364,27 @@ export default function App() {
             ))}
           </div>
         )}
+      </div>
+    </div>
+  );
+
+  // Écran de chargement tant que Firebase n'a pas confirmé la session,
+  // pour éviter le « flash » de la page déconnectée au rafraîchissement.
+  if (!authChecked) return (
+    <div style={{
+      minHeight: "100vh", background: "linear-gradient(160deg, #0f2d0f 0%, #166534 100%)",
+      display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+      gap: 16, fontFamily: "sans-serif"
+    }}>
+      <div style={{
+        width: 72, height: 72, borderRadius: 20,
+        background: "rgba(163,230,53,0.15)", border: "2px solid rgba(163,230,53,0.3)",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        fontSize: 34, color: "#a3e635"
+      }}><FontAwesomeIcon icon={faTrash} /></div>
+      <div style={{ fontSize: 20, fontWeight: 900, color: "#a3e635", letterSpacing: -0.5 }}>Poubelle-CI</div>
+      <div style={{ fontSize: 13, color: "#86efac" }}>
+        <FontAwesomeIcon icon={faClock} style={{ marginRight: 6 }} />Chargement…
       </div>
     </div>
   );
