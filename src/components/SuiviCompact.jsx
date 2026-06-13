@@ -1,6 +1,7 @@
 // Panneau flottant compact de suivi en direct, côté ménage. S'ouvre
 // automatiquement dès qu'un collecteur confirme la collecte (voir Menage.jsx) :
 // mini-carte animée avec la poubelle et le collecteur qui se rapproche.
+// Déplaçable (barre d'en-tête) et redimensionnable depuis les 4 coins.
 
 import { useState, useEffect, useRef } from "react";
 import { MapContainer, TileLayer, Marker, Polyline, useMap } from "react-leaflet";
@@ -12,17 +13,20 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faXmark, faTruck, faCircleCheck, faClock } from "@fortawesome/free-solid-svg-icons";
 
 const nomAffiche = (nom) => nom?.trim().split(/\s+/).pop() || nom || "";
+const clamp = (v, min, max) => Math.max(min, Math.min(v, max));
+const MIN_W = 240, MIN_H = 240;
 
 function Ajuster({ points }) {
   const map = useMap();
   const cadre = useRef(false);
 
-  // La carte est montée dans un conteneur animé : on recalcule sa taille
-  // après l'animation d'entrée pour éviter les tuiles grises.
+  // Recalcule la taille de la carte à chaque changement de dimension du
+  // conteneur (animation d'entrée, redimensionnement) → pas de tuiles grises.
   useEffect(() => {
-    const t1 = setTimeout(() => map.invalidateSize(), 150);
-    const t2 = setTimeout(() => map.invalidateSize(), 450);
-    return () => { clearTimeout(t1); clearTimeout(t2); };
+    const el = map.getContainer();
+    const ro = new ResizeObserver(() => map.invalidateSize());
+    ro.observe(el);
+    return () => ro.disconnect();
   }, [map]);
 
   useEffect(() => {
@@ -50,47 +54,89 @@ export default function SuiviCompact({ signalement, onClose }) {
   const collecte = signalement.status === "collecté";
   const points = posCollecteur ? [poubelle, posCollecteur] : [poubelle];
 
-  // Déplacement libre du panneau (poignée = barre d'en-tête), souris + tactile,
-  // borné aux limites de l'écran. pos = null → position par défaut en bas.
+  // box = { x, y, w, h } en pixels une fois déplacé/redimensionné ;
+  // null = position et taille par défaut (ancré en bas, largeur responsive).
   const panelRef = useRef(null);
-  const drag = useRef({ active: false, dx: 0, dy: 0 });
-  const [pos, setPos] = useState(null);
+  const drag = useRef(null);
+  const resize = useRef(null);
+  const [box, setBox] = useState(null);
   const [grabbing, setGrabbing] = useState(false);
+  const sized = !!box;
 
-  const borner = (x, y, w, h) => ({
-    x: Math.max(6, Math.min(x, window.innerWidth - w - 6)),
-    y: Math.max(6, Math.min(y, window.innerHeight - h - 6)),
-  });
+  const rect = () => panelRef.current.getBoundingClientRect();
 
-  const onPointerDown = (e) => {
+  // ── Déplacement (poignée = en-tête) ──
+  const onHeaderDown = (e) => {
     if (e.target.closest("button")) return;
-    const r = panelRef.current.getBoundingClientRect();
-    drag.current = { active: true, dx: e.clientX - r.left, dy: e.clientY - r.top };
-    setPos({ x: r.left, y: r.top });
+    const r = rect();
+    drag.current = { dx: e.clientX - r.left, dy: e.clientY - r.top, w: r.width, h: r.height };
+    setBox({ x: r.left, y: r.top, w: r.width, h: r.height });
     setGrabbing(true);
     e.currentTarget.setPointerCapture?.(e.pointerId);
   };
-  const onPointerMove = (e) => {
-    if (!drag.current.active) return;
-    const r = panelRef.current.getBoundingClientRect();
-    setPos(borner(e.clientX - drag.current.dx, e.clientY - drag.current.dy, r.width, r.height));
+  const onHeaderMove = (e) => {
+    const s = drag.current; if (!s) return;
+    setBox({
+      x: clamp(e.clientX - s.dx, 6, window.innerWidth - s.w - 6),
+      y: clamp(e.clientY - s.dy, 6, window.innerHeight - s.h - 6),
+      w: s.w, h: s.h,
+    });
   };
-  const onPointerUp = (e) => {
-    drag.current.active = false;
+  const onHeaderUp = (e) => {
+    drag.current = null;
     setGrabbing(false);
     e.currentTarget.releasePointerCapture?.(e.pointerId);
   };
 
-  // Re-borne le panneau si la fenêtre est redimensionnée
+  // ── Redimensionnement (4 coins) ──
+  const onResizeDown = (corner) => (e) => {
+    e.stopPropagation();
+    const r = rect();
+    resize.current = { corner, sx: e.clientX, sy: e.clientY, x: r.left, y: r.top, w: r.width, h: r.height };
+    setBox({ x: r.left, y: r.top, w: r.width, h: r.height });
+    e.currentTarget.setPointerCapture?.(e.pointerId);
+  };
+  const onResizeMove = (e) => {
+    const s = resize.current; if (!s) return;
+    const dx = e.clientX - s.sx, dy = e.clientY - s.sy;
+    const right = s.x + s.w, bottom = s.y + s.h;
+    let { x, y, w, h } = s;
+    if (s.corner.includes("e")) w = clamp(s.w + dx, MIN_W, window.innerWidth - s.x - 6);
+    if (s.corner.includes("s")) h = clamp(s.h + dy, MIN_H, window.innerHeight - s.y - 6);
+    if (s.corner.includes("w")) { w = clamp(s.w - dx, MIN_W, right - 6); x = right - w; }
+    if (s.corner.includes("n")) { h = clamp(s.h - dy, MIN_H, bottom - 6); y = bottom - h; }
+    setBox({ x, y, w, h });
+  };
+  const onResizeUp = (e) => {
+    resize.current = null;
+    e.currentTarget.releasePointerCapture?.(e.pointerId);
+  };
+
+  // Re-borne le panneau si la fenêtre change de taille
   useEffect(() => {
-    const onResize = () => setPos(p => {
-      if (!p || !panelRef.current) return p;
-      const r = panelRef.current.getBoundingClientRect();
-      return borner(p.x, p.y, r.width, r.height);
+    const onWin = () => setBox(b => {
+      if (!b) return b;
+      const w = Math.min(b.w, window.innerWidth - 12);
+      const h = Math.min(b.h, window.innerHeight - 12);
+      return { w, h, x: clamp(b.x, 6, window.innerWidth - w - 6), y: clamp(b.y, 6, window.innerHeight - h - 6) };
     });
-    window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
+    window.addEventListener("resize", onWin);
+    return () => window.removeEventListener("resize", onWin);
   }, []);
+
+  const poignee = (corner, cursor, { grip, ...pos }) => (
+    <div
+      onPointerDown={onResizeDown(corner)}
+      onPointerMove={onResizeMove}
+      onPointerUp={onResizeUp}
+      style={{ position: "absolute", width: 22, height: 22, zIndex: 5, cursor, touchAction: "none", ...pos }}
+    >
+      <div style={{ position: "absolute", width: 11, height: 11, ...grip }} />
+    </div>
+  );
+
+  const brTop = "2.5px solid rgba(255,255,255,0.85)";
+  const brBot = "2.5px solid rgba(15,23,42,0.4)";
 
   return (
     <>
@@ -100,22 +146,23 @@ export default function SuiviCompact({ signalement, onClose }) {
       `}</style>
 
       <div ref={panelRef} style={{
-        position: "fixed", zIndex: 2500,
-        width: "calc(100% - 24px)", maxWidth: 420,
-        ...(pos ? { left: pos.x, top: pos.y, margin: 0 } : { bottom: 12, left: 12, right: 12, margin: "0 auto" }),
+        position: "fixed", zIndex: 2500, display: "flex", flexDirection: "column",
+        ...(sized
+          ? { left: box.x, top: box.y, width: box.w, height: box.h }
+          : { bottom: 12, left: 12, right: 12, width: "calc(100% - 24px)", maxWidth: 420, margin: "0 auto" }),
         background: "white", borderRadius: 18, overflow: "hidden",
         boxShadow: "0 12px 45px rgba(0,0,0,0.32)", fontFamily: "sans-serif",
         animation: "suiviUp 0.4s cubic-bezier(0.2,0.8,0.2,1)"
       }}>
         {/* En-tête (poignée de déplacement) */}
         <div
-          onPointerDown={onPointerDown}
-          onPointerMove={onPointerMove}
-          onPointerUp={onPointerUp}
+          onPointerDown={onHeaderDown}
+          onPointerMove={onHeaderMove}
+          onPointerUp={onHeaderUp}
           style={{
             background: "linear-gradient(135deg, #0f2d0f, #1a4d1a)", padding: "11px 14px",
             display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10,
-            cursor: grabbing ? "grabbing" : "grab", touchAction: "none", userSelect: "none"
+            cursor: grabbing ? "grabbing" : "grab", touchAction: "none", userSelect: "none", flexShrink: 0
           }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
             {!collecte && (
@@ -135,6 +182,7 @@ export default function SuiviCompact({ signalement, onClose }) {
             </div>
           </div>
           <button onClick={onClose} aria-label="Fermer" style={{
+            position: "relative", zIndex: 6,
             background: "rgba(255,255,255,0.14)", border: "none", color: "white",
             borderRadius: 10, width: 32, height: 32, cursor: "pointer", fontSize: 14, flexShrink: 0
           }}>
@@ -142,8 +190,8 @@ export default function SuiviCompact({ signalement, onClose }) {
           </button>
         </div>
 
-        {/* Mini-carte */}
-        <div style={{ height: 190, position: "relative", zIndex: 0 }}>
+        {/* Mini-carte (occupe l'espace restant quand le panneau est redimensionné) */}
+        <div style={{ position: "relative", zIndex: 0, ...(sized ? { flex: 1, minHeight: 0 } : { height: 190 }) }}>
           <MapContainer center={[poubelle.lat, poubelle.lng]} zoom={15} maxZoom={21}
             zoomControl={false} style={{ height: "100%", width: "100%" }}>
             <TileLayer
@@ -166,13 +214,14 @@ export default function SuiviCompact({ signalement, onClose }) {
         </div>
 
         {/* Bandeau d'état */}
-        <div style={{ padding: "11px 14px" }}>
+        <div style={{ padding: "11px 14px", flexShrink: 0 }}>
           {collecte ? (
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
               <span style={{ fontSize: 13, fontWeight: 800, color: "#16a34a" }}>
                 <FontAwesomeIcon icon={faCircleCheck} style={{ marginRight: 6 }} />Merci d'utiliser Poubelle-CI !
               </span>
               <button onClick={onClose} style={{
+                position: "relative", zIndex: 6,
                 padding: "8px 16px", borderRadius: 10, border: "none", cursor: "pointer",
                 background: "linear-gradient(135deg, #16a34a, #15803d)", color: "white", fontWeight: 800, fontSize: 12
               }}>Fermer</button>
@@ -199,6 +248,12 @@ export default function SuiviCompact({ signalement, onClose }) {
             </div>
           )}
         </div>
+
+        {/* Poignées de redimensionnement (4 coins) */}
+        {poignee("nw", "nwse-resize", { top: 0, left: 0, grip: { top: 5, left: 5, borderTop: brTop, borderLeft: brTop, borderTopLeftRadius: 4 } })}
+        {poignee("ne", "nesw-resize", { top: 0, right: 0, grip: { top: 5, right: 5, borderTop: brTop, borderRight: brTop, borderTopRightRadius: 4 } })}
+        {poignee("sw", "nesw-resize", { bottom: 0, left: 0, grip: { bottom: 5, left: 5, borderBottom: brBot, borderLeft: brBot, borderBottomLeftRadius: 4 } })}
+        {poignee("se", "nwse-resize", { bottom: 0, right: 0, grip: { bottom: 5, right: 5, borderBottom: brBot, borderRight: brBot, borderBottomRightRadius: 4 } })}
       </div>
     </>
   );
