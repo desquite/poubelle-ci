@@ -50,6 +50,48 @@ export default function SuiviCompact({ signalement, onClose }) {
   const collecte = signalement.status === "collecté";
   const points = posCollecteur ? [poubelle, posCollecteur] : [poubelle];
 
+  // Déplacement libre du panneau (poignée = barre d'en-tête), souris + tactile,
+  // borné aux limites de l'écran. pos = null → position par défaut en bas.
+  const panelRef = useRef(null);
+  const drag = useRef({ active: false, dx: 0, dy: 0 });
+  const [pos, setPos] = useState(null);
+  const [grabbing, setGrabbing] = useState(false);
+
+  const borner = (x, y, w, h) => ({
+    x: Math.max(6, Math.min(x, window.innerWidth - w - 6)),
+    y: Math.max(6, Math.min(y, window.innerHeight - h - 6)),
+  });
+
+  const onPointerDown = (e) => {
+    if (e.target.closest("button")) return;
+    const r = panelRef.current.getBoundingClientRect();
+    drag.current = { active: true, dx: e.clientX - r.left, dy: e.clientY - r.top };
+    setPos({ x: r.left, y: r.top });
+    setGrabbing(true);
+    e.currentTarget.setPointerCapture?.(e.pointerId);
+  };
+  const onPointerMove = (e) => {
+    if (!drag.current.active) return;
+    const r = panelRef.current.getBoundingClientRect();
+    setPos(borner(e.clientX - drag.current.dx, e.clientY - drag.current.dy, r.width, r.height));
+  };
+  const onPointerUp = (e) => {
+    drag.current.active = false;
+    setGrabbing(false);
+    e.currentTarget.releasePointerCapture?.(e.pointerId);
+  };
+
+  // Re-borne le panneau si la fenêtre est redimensionnée
+  useEffect(() => {
+    const onResize = () => setPos(p => {
+      if (!p || !panelRef.current) return p;
+      const r = panelRef.current.getBoundingClientRect();
+      return borner(p.x, p.y, r.width, r.height);
+    });
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+
   return (
     <>
       <style>{`
@@ -57,18 +99,24 @@ export default function SuiviCompact({ signalement, onClose }) {
         @keyframes suiviPulse { 0% { box-shadow: 0 0 0 0 rgba(163,230,53,0.6); } 70% { box-shadow: 0 0 0 7px rgba(163,230,53,0); } 100% { box-shadow: 0 0 0 0 rgba(163,230,53,0); } }
       `}</style>
 
-      <div style={{
-        position: "fixed", bottom: 12, left: 12, right: 12, zIndex: 2500,
-        maxWidth: 420, margin: "0 auto",
+      <div ref={panelRef} style={{
+        position: "fixed", zIndex: 2500,
+        width: "calc(100% - 24px)", maxWidth: 420,
+        ...(pos ? { left: pos.x, top: pos.y, margin: 0 } : { bottom: 12, left: 12, right: 12, margin: "0 auto" }),
         background: "white", borderRadius: 18, overflow: "hidden",
         boxShadow: "0 12px 45px rgba(0,0,0,0.32)", fontFamily: "sans-serif",
         animation: "suiviUp 0.4s cubic-bezier(0.2,0.8,0.2,1)"
       }}>
-        {/* En-tête */}
-        <div style={{
-          background: "linear-gradient(135deg, #0f2d0f, #1a4d1a)", padding: "11px 14px",
-          display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10
-        }}>
+        {/* En-tête (poignée de déplacement) */}
+        <div
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={onPointerUp}
+          style={{
+            background: "linear-gradient(135deg, #0f2d0f, #1a4d1a)", padding: "11px 14px",
+            display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10,
+            cursor: grabbing ? "grabbing" : "grab", touchAction: "none", userSelect: "none"
+          }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
             {!collecte && (
               <span style={{
