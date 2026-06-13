@@ -7,6 +7,13 @@
     <meta name="theme-color" content="#2e7d32" />
     <meta name="description" content="Signalement de collecte de déchets en Côte d'Ivoire" />
     <link rel="manifest" href="/manifest.json" />
+
+    <!-- Installation PWA sur iPhone/iPad (iOS ignore le manifest pour l'icône) -->
+    <link rel="apple-touch-icon" href="/icon-192.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Poubelle-CI" />
     <title>Poubelle-CI</title>
     <script>
       if ("serviceWorker" in navigator) {

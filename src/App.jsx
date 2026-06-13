@@ -14,7 +14,7 @@ import {
   faTrash, faClock, faMap, faTriangleExclamation, faXmark,
   faTruck, faHouse, faBox, faChartBar, faUsers, faClipboardList,
   faLock, faUserPlus, faMobileScreen, faGlobe, faArrowLeft,
-  faBasketShopping
+  faBasketShopping, faArrowUpFromBracket
 } from "@fortawesome/free-solid-svg-icons";
 
 const nomAffiche = (nom) => nom?.trim().split(/\s+/).pop() || nom || "";
@@ -158,6 +158,7 @@ export default function App() {
   const [authChecked, setAuthChecked] = useState(false);
   const [installPrompt, setInstallPrompt] = useState(null);
   const [showInstall, setShowInstall] = useState(false);
+  const [showIosInstall, setShowIosInstall] = useState(false);
 
   useEffect(() => {
     window.addEventListener("beforeinstallprompt", (e) => {
@@ -165,6 +166,15 @@ export default function App() {
       setInstallPrompt(e);
       setShowInstall(true);
     });
+
+    // iOS ne déclenche pas beforeinstallprompt : on guide l'utilisateur Safari
+    // (la seule voie d'installation sur iPhone) tant que l'app n'est pas installée.
+    const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
+    const isSafari = /safari/i.test(navigator.userAgent) && !/crios|fxios|edgios/i.test(navigator.userAgent);
+    const dejaInstallee = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone;
+    if (isIos && isSafari && !dejaInstallee && !localStorage.getItem("iosInstallFerme")) {
+      setShowIosInstall(true);
+    }
 
     const unsub = onAuthStateChanged(auth, async (user) => {
       try {
@@ -219,6 +229,25 @@ export default function App() {
               background: "#14532d", color: "#a3e635", border: "none",
               borderRadius: 8, padding: "6px 14px", fontWeight: 800, cursor: "pointer", fontSize: 12
             }}>Installer</button>
+          </div>
+        )}
+
+        {showIosInstall && (
+          <div style={{
+            background: "#a3e635", padding: "10px 14px",
+            display: "flex", alignItems: "center", gap: 10,
+            borderRadius: 10, margin: "10px 0"
+          }}>
+            <span style={{ fontSize: 12, fontWeight: 700, color: "#14532d", flex: 1, lineHeight: 1.4 }}>
+              <FontAwesomeIcon icon={faMobileScreen} style={{ marginRight: 6 }} />
+              Pour installer : appuyez sur <FontAwesomeIcon icon={faArrowUpFromBracket} style={{ margin: "0 3px" }} />
+              Partager, puis « Sur l'écran d'accueil »
+            </span>
+            <button onClick={() => { setShowIosInstall(false); localStorage.setItem("iosInstallFerme", "1"); }}
+              aria-label="Fermer" style={{
+                background: "#14532d", color: "#a3e635", border: "none",
+                borderRadius: 8, width: 28, height: 28, fontWeight: 800, cursor: "pointer", fontSize: 12, flexShrink: 0
+              }}><FontAwesomeIcon icon={faXmark} /></button>
           </div>
         )}
 
