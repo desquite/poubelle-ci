@@ -9,6 +9,7 @@ import Connexion from "./pages/Connexion";
 import Admin from "./pages/Admin";
 import CartePublique from "./components/CartePublique";
 import CarteSignalement from "./components/CarteSignalement";
+import Logo from "./components/Logo";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faTrash, faClock, faMap, faTriangleExclamation, faXmark,
@@ -253,12 +254,7 @@ export default function App() {
 
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 0" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <div style={{
-              width: 36, height: 36, borderRadius: 10,
-              background: "linear-gradient(135deg, #a3e635, #4ade80)",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: 18, boxShadow: "0 2px 8px rgba(163,230,53,0.4)"
-            }}><FontAwesomeIcon icon={faTrash} style={{ color: "#14532d" }} /></div>
+            <Logo size={40} withBadge={false} />
             <div>
               <div style={{ fontSize: 18, fontWeight: 900, color: "#a3e635", letterSpacing: -0.5 }}>Poubelle-CI</div>
               <div style={{ fontSize: 10, color: "#4ade80", fontWeight: 500 }}>Collecte propre, ville propre</div>
@@ -334,12 +330,7 @@ export default function App() {
       display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
       gap: 16, fontFamily: "sans-serif"
     }}>
-      <div style={{
-        width: 72, height: 72, borderRadius: 20,
-        background: "rgba(163,230,53,0.15)", border: "2px solid rgba(163,230,53,0.3)",
-        display: "flex", alignItems: "center", justifyContent: "center",
-        fontSize: 34, color: "#a3e635"
-      }}><FontAwesomeIcon icon={faTrash} /></div>
+      <Logo size={80} withBadge={false} />
       <div style={{ fontSize: 20, fontWeight: 900, color: "#a3e635", letterSpacing: -0.5 }}>Poubelle-CI</div>
       <div style={{ fontSize: 13, color: "#86efac" }}>
         <FontAwesomeIcon icon={faClock} style={{ marginRight: 6 }} />Chargement…
@@ -366,12 +357,7 @@ export default function App() {
           background: "rgba(74,222,128,0.08)", bottom: -40, left: -40
         }} />
 
-        <div style={{
-          width: 72, height: 72, borderRadius: 20, margin: "0 auto 16px",
-          background: "rgba(163,230,53,0.15)", display: "flex",
-          alignItems: "center", justifyContent: "center", fontSize: 36,
-          border: "2px solid rgba(163,230,53,0.3)", color: "#a3e635"
-        }}><FontAwesomeIcon icon={faTrash} /></div>
+        <div style={{ marginBottom: 16 }}><Logo size={84} withBadge={false} /></div>
 
         <h2 style={{ color: "white", fontSize: 22, fontWeight: 900, margin: "0 0 8px", letterSpacing: -0.5 }}>
           Signaler, c'est agir pour<br />
