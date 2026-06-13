@@ -1,9 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { collection, addDoc, serverTimestamp, query, where, onSnapshot, deleteDoc, doc } from "firebase/firestore";
 import { db } from "../firebase/config";
 import { COMMUNES_QUARTIERS, COMMUNES, COMMUNES_COORDS } from "../quartiers";
 import { distanceKm } from "../utils/geo";
-import SuiviCollecte from "../components/SuiviCollecte";
+import SuiviCompact from "../components/SuiviCompact";
 import CarteSignalement from "../components/CarteSignalement";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -42,6 +42,7 @@ export default function Menage({ utilisateur, mode }) {
   const [loading, setLoading] = useState(false);
   const [mesSignalements, setMesSignalements] = useState([]);
   const [suiviId, setSuiviId] = useState(null);
+  const suiviFermes = useRef(new Set());
 
   useEffect(() => {
     if (!utilisateur?.uid) return;
@@ -53,6 +54,27 @@ export default function Menage({ utilisateur, mode }) {
     });
     return () => unsub();
   }, [utilisateur]);
+
+  // Ouverture automatique du suivi dès qu'une collecte est confirmée (passage
+  // à « en cours »), ou à la connexion si une collecte est déjà en cours.
+  // Si le ménage a fermé le panneau, on ne le rouvre pas pour la même collecte.
+  useEffect(() => {
+    if (suiviId) return;
+    const candidat = mesSignalements.find(
+      s => s.status === "en cours" && s.collecteurId && s.lat && !suiviFermes.current.has(s.id)
+    );
+    if (candidat) setSuiviId(candidat.id);
+  }, [mesSignalements, suiviId]);
+
+  const fermerSuivi = () => {
+    if (suiviId) suiviFermes.current.add(suiviId);
+    setSuiviId(null);
+  };
+
+  const signalementSuivi = suiviId ? mesSignalements.find(s => s.id === suiviId) : null;
+  const trackerEl = signalementSuivi
+    ? <SuiviCompact signalement={signalementSuivi} onClose={fermerSuivi} />
+    : null;
 
   const inp = {
     width: "100%", padding: "12px 14px", borderRadius: 12, border: "1.5px solid #e2e8f0",
@@ -123,14 +145,10 @@ export default function Menage({ utilisateur, mode }) {
   };
 
   // ── Vue Historique ──
-  const signalementSuivi = suiviId ? mesSignalements.find(s => s.id === suiviId) : null;
-
   if (mode === "mescollectes") return (
     <div style={{ padding: "16px", maxWidth: 440, margin: "0 auto" }}>
 
-      {signalementSuivi && (
-        <SuiviCollecte signalement={signalementSuivi} onClose={() => setSuiviId(null)} />
-      )}
+      {trackerEl}
 
       {/* Stats */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 20 }}>
@@ -157,7 +175,7 @@ export default function Menage({ utilisateur, mode }) {
       {mesSignalements.map(s => (
         <CarteSignalement key={s.id} s={s} titre={s.type} actions={
           s.status === "en cours" && s.collecteurId && s.lat ? (
-            <button onClick={() => setSuiviId(s.id)} style={{
+            <button onClick={() => { suiviFermes.current.delete(s.id); setSuiviId(s.id); }} style={{
               width: "100%", padding: "11px", cursor: "pointer", fontWeight: 800, fontSize: 13,
               background: "linear-gradient(135deg, #16a34a, #15803d)", color: "white",
               border: "none", borderRadius: 12, boxShadow: "0 3px 10px rgba(22,163,74,0.3)"
@@ -180,6 +198,8 @@ export default function Menage({ utilisateur, mode }) {
   // ── Vue Signaler ──
   return (
     <div style={{ padding: "16px", maxWidth: 440, margin: "0 auto" }}>
+
+      {trackerEl}
 
       {/* Étape 0 — Accueil */}
       {step === 0 && (
