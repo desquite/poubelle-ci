@@ -124,19 +124,15 @@ export default function SuiviCompact({ signalement, onClose }) {
     return () => window.removeEventListener("resize", onWin);
   }, []);
 
-  const poignee = (corner, cursor, { grip, ...pos }) => (
+  // Zones de redimensionnement invisibles aux 4 coins (pas de cadre visible)
+  const poignee = (corner, cursor, pos) => (
     <div
       onPointerDown={onResizeDown(corner)}
       onPointerMove={onResizeMove}
       onPointerUp={onResizeUp}
-      style={{ position: "absolute", width: 22, height: 22, zIndex: 5, cursor, touchAction: "none", ...pos }}
-    >
-      <div style={{ position: "absolute", width: 11, height: 11, ...grip }} />
-    </div>
+      style={{ position: "absolute", width: 26, height: 26, zIndex: 5, cursor, touchAction: "none", ...pos }}
+    />
   );
-
-  const brTop = "2.5px solid rgba(255,255,255,0.85)";
-  const brBot = "2.5px solid rgba(15,23,42,0.4)";
 
   return (
     <>
@@ -249,11 +245,11 @@ export default function SuiviCompact({ signalement, onClose }) {
           )}
         </div>
 
-        {/* Poignées de redimensionnement (4 coins) */}
-        {poignee("nw", "nwse-resize", { top: 0, left: 0, grip: { top: 5, left: 5, borderTop: brTop, borderLeft: brTop, borderTopLeftRadius: 4 } })}
-        {poignee("ne", "nesw-resize", { top: 0, right: 0, grip: { top: 5, right: 5, borderTop: brTop, borderRight: brTop, borderTopRightRadius: 4 } })}
-        {poignee("sw", "nesw-resize", { bottom: 0, left: 0, grip: { bottom: 5, left: 5, borderBottom: brBot, borderLeft: brBot, borderBottomLeftRadius: 4 } })}
-        {poignee("se", "nwse-resize", { bottom: 0, right: 0, grip: { bottom: 5, right: 5, borderBottom: brBot, borderRight: brBot, borderBottomRightRadius: 4 } })}
+        {/* Poignées de redimensionnement invisibles (4 coins) */}
+        {poignee("nw", "nwse-resize", { top: 0, left: 0 })}
+        {poignee("ne", "nesw-resize", { top: 0, right: 0 })}
+        {poignee("sw", "nesw-resize", { bottom: 0, left: 0 })}
+        {poignee("se", "nwse-resize", { bottom: 0, right: 0 })}
       </div>
     </>
   );
