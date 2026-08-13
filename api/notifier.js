@@ -44,7 +44,7 @@ export default async function handler(req, res) {
       });
 
     const prixTexte = Number(prix) > 0 ? `\n💰 *${Number(prix).toLocaleString("fr-FR")} FCFA*` : "";
-    const message = `🗑️ *Nouveau signalement - Poubelle-CI*\n\n📍 *${commune} — ${quartier}*\n👤 ${nom}\n🗑️ ${type} · ${volume}${prixTexte}${urgent ? "\n🔴 URGENT !" : ""}${lat ? `\n\n🗺️ Localisation : https://www.google.com/maps?q=${lat},${lng}` : ""}\n\n👉 Connectez-vous pour accepter !\npoubelle-ci.vercel.app`;
+    const message = `🗑️ *Nouvelle collecte à prendre - Poubelle-CI*\n\n📍 *${commune} — ${quartier}*\n👤 ${nom}\n🗑️ ${type} · ${volume}${prixTexte}${urgent ? "\n🔴 URGENT !" : ""}${lat ? `\n\n🗺️ Localisation : https://www.google.com/maps?q=${lat},${lng}` : ""}\n\n👉 Connectez-vous pour accepter !\npoubelle-ci.vercel.app`;
 
     await Promise.all(collecteurs.map(c => envoyerWhatsApp(c.telephone, message)));
 

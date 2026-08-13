@@ -140,8 +140,8 @@ export default function Menage({ utilisateur, mode }) {
   };
 
   const supprimerSignalement = async (id, status) => {
-    if (status === "en cours") { alert("Impossible de supprimer un signalement en cours."); return; }
-    if (window.confirm("Supprimer ce signalement ?")) await deleteDoc(doc(db, "signalements", id));
+    if (status === "en cours") { alert("Impossible de supprimer une demande en cours."); return; }
+    if (window.confirm("Supprimer cette demande de collecte ?")) await deleteDoc(doc(db, "signalements", id));
   };
 
   // ── Vue Historique ──
@@ -168,7 +168,7 @@ export default function Menage({ utilisateur, mode }) {
       {mesSignalements.length === 0 && (
         <div style={{ textAlign: "center", padding: 48, color: "#94a3b8" }}>
           <div style={{ fontSize: 36, marginBottom: 8 }}><FontAwesomeIcon icon={faClipboardList} /></div>
-          <div style={{ fontSize: 13 }}>Aucun signalement pour le moment</div>
+          <div style={{ fontSize: 13 }}>Aucune demande de collecte pour le moment</div>
         </div>
       )}
 
@@ -210,7 +210,7 @@ export default function Menage({ utilisateur, mode }) {
             marginBottom: 20, boxShadow: "0 8px 32px rgba(15,45,15,0.25)"
           }}>
             <div style={{ fontSize: 48, marginBottom: 12, color: "#a3e635" }}><FontAwesomeIcon icon={faTrash} /></div>
-            <h3 style={{ color: "white", fontSize: 18, fontWeight: 900, margin: "0 0 8px" }}>Signaler ma poubelle</h3>
+            <h3 style={{ color: "white", fontSize: 18, fontWeight: 900, margin: "0 0 8px" }}>Demander une collecte</h3>
             <p style={{ color: "#86efac", fontSize: 13, margin: "0 0 20px" }}>Un collecteur interviendra rapidement</p>
             <button onClick={() => setStep(1)} style={{
               background: "linear-gradient(135deg, #a3e635, #65a30d)", color: "#14532d",
@@ -218,7 +218,7 @@ export default function Menage({ utilisateur, mode }) {
               fontSize: 15, fontWeight: 900, cursor: "pointer",
               boxShadow: "0 4px 16px rgba(163,230,53,0.4)"
             }}>
-              + Nouveau signalement
+              + Nouvelle demande
             </button>
           </div>
 
@@ -337,7 +337,7 @@ export default function Menage({ utilisateur, mode }) {
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
             <div style={{ width: 32, height: 32, borderRadius: 10, background: "linear-gradient(135deg, #16a34a, #15803d)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, color: "white" }}><FontAwesomeIcon icon={faTrash} /></div>
             <div>
-              <div style={{ fontSize: 15, fontWeight: 800, color: "#0f172a" }}>Détails du signalement</div>
+              <div style={{ fontSize: 15, fontWeight: 800, color: "#0f172a" }}>Détails de la demande</div>
               <div style={{ fontSize: 11, color: "#94a3b8" }}>Étape 2 sur 2</div>
             </div>
           </div>
@@ -442,7 +442,7 @@ export default function Menage({ utilisateur, mode }) {
           boxShadow: "0 8px 32px rgba(15,45,15,0.25)"
         }}>
           <div style={{ fontSize: 56, marginBottom: 12, color: "#a3e635" }}><FontAwesomeIcon icon={faCircleCheck} /></div>
-          <h3 style={{ margin: "0 0 8px", color: "white", fontWeight: 900, fontSize: 20 }}>Signalement envoyé !</h3>
+          <h3 style={{ margin: "0 0 8px", color: "white", fontWeight: 900, fontSize: 20 }}>Demande envoyée !</h3>
           <p style={{ color: "#86efac", fontSize: 13, margin: "0 0 24px", lineHeight: 1.5 }}>
             Les collecteurs de votre zone<br />ont été notifiés par WhatsApp.
           </p>
@@ -451,7 +451,7 @@ export default function Menage({ utilisateur, mode }) {
             color: "#14532d", border: "none", borderRadius: 14, fontWeight: 900,
             fontSize: 14, cursor: "pointer", boxShadow: "0 4px 16px rgba(163,230,53,0.4)"
           }}>
-            + Nouveau signalement
+            + Nouvelle demande
           </button>
         </div>
       )}

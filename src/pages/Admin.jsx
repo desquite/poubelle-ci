@@ -97,7 +97,7 @@ export default function Admin({ onglet }) {
       {/* Stats principales */}
       <div style={{ display: "grid", gridTemplateColumns: estBureau ? "repeat(4, 1fr)" : "1fr 1fr", gap: 10, marginBottom: 16 }}>
         {[
-          { label: "Total signalements", value: stats.total, icon: faBox, color: "#0f172a", bg: "linear-gradient(135deg, #f8fafc, #f1f5f9)", border: "#e2e8f0" },
+          { label: "Total collectes", value: stats.total, icon: faBox, color: "#0f172a", bg: "linear-gradient(135deg, #f8fafc, #f1f5f9)", border: "#e2e8f0" },
           { label: "Taux de collecte", value: `${stats.tauxCollecte}%`, icon: faChartBar, color: "#16a34a", bg: "linear-gradient(135deg, #f0fdf4, #dcfce7)", border: "#bbf7d0" },
           { label: "Ménages inscrits", value: stats.menages, icon: faHouse, color: "#3b82f6", bg: "linear-gradient(135deg, #eff6ff, #dbeafe)", border: "#bfdbfe" },
           { label: "Collecteurs actifs", value: stats.collecteurs, icon: faTruck, color: "#d97706", bg: "linear-gradient(135deg, #fffbeb, #fef3c7)", border: "#fde68a" },
@@ -118,7 +118,7 @@ export default function Admin({ onglet }) {
 
       {/* Statuts */}
       <div style={{ background: "white", borderRadius: 16, padding: "16px", marginBottom: 16, boxShadow: "0 2px 12px rgba(0,0,0,0.07)" }}>
-        <div style={{ fontSize: 13, fontWeight: 800, color: "#0f172a", marginBottom: 14 }}><FontAwesomeIcon icon={faClipboardList} style={{ marginRight: 6 }} />État des signalements</div>
+        <div style={{ fontSize: 13, fontWeight: 800, color: "#0f172a", marginBottom: 14 }}><FontAwesomeIcon icon={faClipboardList} style={{ marginRight: 6 }} />État des demandes de collecte</div>
         {[
           { label: "Disponibles", value: stats.disponibles, color: "#16a34a", bg: "#f0fdf4" },
           { label: "En cours", value: stats.enCours, color: "#d97706", bg: "#fffbeb" },
@@ -188,7 +188,7 @@ export default function Admin({ onglet }) {
         )}
       </div>
 
-      <div style={{ fontSize: 12, color: "#94a3b8", marginBottom: 12, fontWeight: 600 }}>{signalementsFiltrés.length} signalement{signalementsFiltrés.length > 1 ? "s" : ""}</div>
+      <div style={{ fontSize: 12, color: "#94a3b8", marginBottom: 12, fontWeight: 600 }}>{signalementsFiltrés.length} demande{signalementsFiltrés.length > 1 ? "s" : ""} de collecte</div>
 
       <div style={grilleCartes(estBureau, 340)}>
       {signalementsFiltrés.map(s => {

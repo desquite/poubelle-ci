@@ -180,7 +180,7 @@ export default function CartePublique({ signalements, commune, onInscription }) 
       )}
 
       <div style={{ fontSize: 10, color: "#94a3b8", textAlign: "center", marginTop: 8 }}>
-        Les positions des signalements sont approximatives. Créez un compte collecteur pour voir les positions exactes.
+        Les positions des demandes de collecte sont approximatives. Créez un compte collecteur pour voir les positions exactes.
       </div>
     </div>
   );

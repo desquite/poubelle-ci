@@ -42,7 +42,7 @@ export default function CarteSignalement({ s, titre, distance, showPhone, action
       {s.urgent && (
         <div style={{ background: "#fef2f2", padding: "5px 14px", display: "flex", alignItems: "center", gap: 6 }}>
           <FontAwesomeIcon icon={faTriangleExclamation} style={{ fontSize: 11, color: "#dc2626" }} />
-          <span style={{ fontSize: 10, fontWeight: 800, color: "#dc2626", letterSpacing: 0.5 }}>SIGNALEMENT URGENT</span>
+          <span style={{ fontSize: 10, fontWeight: 800, color: "#dc2626", letterSpacing: 0.5 }}>COLLECTE URGENTE</span>
         </div>
       )}
 

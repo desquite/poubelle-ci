@@ -63,7 +63,7 @@ function SignalementsPublics({ onInscription }) {
       {/* Section titre + compteur */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
         <div>
-          <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: "#0f172a" }}>Signalements actifs</h3>
+          <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: "#0f172a" }}>Collectes demandées</h3>
           <p style={{ margin: 0, fontSize: 12, color: "#64748b" }}>En attente de collecte</p>
         </div>
         <div style={{
@@ -134,7 +134,7 @@ function SignalementsPublics({ onInscription }) {
       {vue === "liste" && filtres.length === 0 && (
         <div style={{ textAlign: "center", padding: "40px 20px", color: "#94a3b8", fontSize: 13 }}>
           <div style={{ fontSize: 40, marginBottom: 8 }}><FontAwesomeIcon icon={faTrash} /></div>
-          Aucun signalement pour ce filtre
+          Aucune demande de collecte pour ce filtre
         </div>
       )}
 
@@ -322,16 +322,16 @@ export default function App() {
           }}>
             {(utilisateur?.role === "admin" ? [
               { key: "dashboard", icon: faChartBar, label: "Dashboard", desc: "Vue globale" },
-              { key: "signalements", icon: faBox, label: "Signalements", desc: "Tous" },
+              { key: "signalements", icon: faBox, label: "Collectes", desc: "Toutes" },
               { key: "utilisateurs", icon: faUsers, label: "Utilisateurs", desc: "Gérer" },
             ] : utilisateur?.role === "mairie" ? [
               { key: "traitement", icon: faClipboardList, label: "Traitement", desc: "À traiter" },
               { key: "carte-mairie", icon: faMap, label: "Carte", desc: "Vue terrain" },
               { key: "bilan", icon: faChartBar, label: "Bilan", desc: "Délais" },
             ] : utilisateur?.role === "menage" ? [
-              { key: "menage", icon: faHouse, label: "Ma poubelle", desc: "Signaler" },
-              { key: "insalubrite", icon: faTriangleExclamation, label: "Insalubrité", desc: "Caniveau, tas" },
-              { key: "mescollectes", icon: faClipboardList, label: "Historique", desc: "Mes signalements" },
+              { key: "menage", icon: faHouse, label: "Ma poubelle", desc: "Demander" },
+              { key: "insalubrite", icon: faTriangleExclamation, label: "Insalubrité", desc: "Signaler" },
+              { key: "mescollectes", icon: faClipboardList, label: "Historique", desc: "Mes collectes" },
             ] : [
               { key: "carte", icon: faMap, label: "Carte", desc: "Autour de moi" },
               { key: "corbeille", icon: faBasketShopping, label: "Corbeille", desc: "Brouillons" },

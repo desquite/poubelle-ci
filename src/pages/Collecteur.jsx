@@ -177,7 +177,7 @@ export default function Collecteur({ utilisateur, mode, onChangeMode }) {
           {corbeilleItems.length === 0 ? (
             <div style={{ textAlign: "center", padding: 48, color: "#94a3b8" }}>
               <div style={{ fontSize: 36, marginBottom: 8 }}><FontAwesomeIcon icon={faBasketShopping} /></div>
-              <div style={{ fontSize: 13, marginBottom: 16 }}>Votre corbeille est vide.<br />Ajoutez des signalements depuis la carte.</div>
+              <div style={{ fontSize: 13, marginBottom: 16 }}>Votre corbeille est vide.<br />Ajoutez des collectes depuis la carte.</div>
               <button onClick={() => onChangeMode?.("carte")} style={{
                 padding: "11px 22px", borderRadius: 12, border: "none", cursor: "pointer",
                 background: "linear-gradient(135deg, #16a34a, #15803d)", color: "white",

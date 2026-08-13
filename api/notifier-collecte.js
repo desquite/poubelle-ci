@@ -22,7 +22,7 @@ export default async function handler(req, res) {
     let message;
     if (type === "acceptation") {
       if (s.status !== "en cours") return res.status(400).json({ error: "Statut incohérent" });
-      message = `✅ *Votre signalement a été accepté !*\n\n🚛 *Collecteur :* ${nomAffiche(s.collecteurNom)}\n📞 *Téléphone :* +${s.collecteurId}\n\nIl arrive bientôt. Suivez sa position en direct sur l'app ! 🗺️\npoubelle-ci.vercel.app`;
+      message = `✅ *Votre demande de collecte a été acceptée !*\n\n🚛 *Collecteur :* ${nomAffiche(s.collecteurNom)}\n📞 *Téléphone :* +${s.collecteurId}\n\nIl arrive bientôt. Suivez sa position en direct sur l'app ! 🗺️\npoubelle-ci.vercel.app`;
     } else if (type === "collecte_terminee") {
       if (s.status !== "collecté") return res.status(400).json({ error: "Statut incohérent" });
       message = `✅ *Votre poubelle a été collectée !*\n\n🚛 *Collecteur :* ${nomAffiche(s.collecteurNom)}\n📍 ${s.commune} — ${s.quartier}\n\nMerci d'utiliser Poubelle-CI ! 🌍\npoubelle-ci.vercel.app`;
