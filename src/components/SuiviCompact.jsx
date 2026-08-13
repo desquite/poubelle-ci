@@ -4,11 +4,13 @@
 // Déplaçable (barre d'en-tête) et redimensionnable depuis les 4 coins.
 
 import { useState, useEffect, useRef } from "react";
-import { MapContainer, TileLayer, Marker, Polyline, useMap } from "react-leaflet";
+import { MapContainer, Marker, Polyline, useMap } from "react-leaflet";
 import { doc, onSnapshot } from "firebase/firestore";
 import { db } from "../firebase/config";
 import { distanceKm, formatDistance } from "../utils/geo";
 import { iconPoubelle, iconPoubelleUrgente, iconCamion } from "./mapIcons";
+import { FondCarte, BoutonFond } from "./FondCarte";
+import { useFondCarte, ZOOM_MAX } from "../utils/fondCarte";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faXmark, faTruck, faCircleCheck, faClock } from "@fortawesome/free-solid-svg-icons";
 
@@ -40,6 +42,7 @@ function Ajuster({ points }) {
 
 export default function SuiviCompact({ signalement, onClose }) {
   const [posCollecteur, setPosCollecteur] = useState(null);
+  const [fond, setFond] = useFondCarte();
 
   useEffect(() => {
     if (!signalement?.collecteurId) return;
@@ -188,13 +191,9 @@ export default function SuiviCompact({ signalement, onClose }) {
 
         {/* Mini-carte (occupe l'espace restant quand le panneau est redimensionné) */}
         <div style={{ position: "relative", zIndex: 0, ...(sized ? { flex: 1, minHeight: 0 } : { height: 190 }) }}>
-          <MapContainer center={[poubelle.lat, poubelle.lng]} zoom={15} maxZoom={21}
+          <MapContainer center={[poubelle.lat, poubelle.lng]} zoom={15} maxZoom={ZOOM_MAX}
             zoomControl={false} style={{ height: "100%", width: "100%" }}>
-            <TileLayer
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-              attribution='&copy; OpenStreetMap'
-              maxZoom={21} maxNativeZoom={19}
-            />
+            <FondCarte vue={fond} />
             <Ajuster points={points} />
 
             <Marker position={[poubelle.lat, poubelle.lng]} icon={signalement.urgent ? iconPoubelleUrgente : iconPoubelle} />
@@ -207,6 +206,8 @@ export default function SuiviCompact({ signalement, onClose }) {
               </>
             )}
           </MapContainer>
+
+          <BoutonFond vue={fond} onChange={setFond} compact />
         </div>
 
         {/* Bandeau d'état */}

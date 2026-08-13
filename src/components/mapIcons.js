@@ -18,6 +18,25 @@ const svgIcon = (path, viewBox, bg, size = 34, badge = null) =>
     popupAnchor: [0, -size / 2],
   });
 
+// Borne connectée : un anneau de jauge qui se remplit dans le sens horaire,
+// avec le pourcentage au centre. La forme (anneau) la distingue au premier
+// coup d'œil des signalements de poubelle (disques pleins).
+export const iconBorne = (pct = 0, couleur = "#16a34a", size = 44) => {
+  const angle = Math.max(0, Math.min(100, pct)) * 3.6;
+  return L.divIcon({
+    className: "",
+    html: `<div style="width:${size}px;height:${size}px;border-radius:50%;background:conic-gradient(${couleur} ${angle}deg, #e2e8f0 ${angle}deg);box-shadow:0 2px 10px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;">
+      <div style="width:${size - 9}px;height:${size - 9}px;border-radius:50%;background:white;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1;">
+        <svg viewBox="0 0 448 512" width="11" height="11" fill="${couleur}" style="margin-bottom:1px"><path d="${TRASH_PATH}"/></svg>
+        <span style="font-size:10px;font-weight:900;color:${couleur};font-family:sans-serif">${Math.round(pct)}%</span>
+      </div>
+    </div>`,
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size / 2],
+    popupAnchor: [0, -size / 2],
+  });
+};
+
 export const iconPoubelle = svgIcon(TRASH_PATH, "0 0 448 512", "linear-gradient(135deg, #16a34a, #15803d)");
 export const iconPoubelleUrgente = svgIcon(TRASH_PATH, "0 0 448 512", "linear-gradient(135deg, #ef4444, #dc2626)");
 export const iconPoubelleCorbeille = svgIcon(TRASH_PATH, "0 0 448 512", "linear-gradient(135deg, #16a34a, #15803d)", 34, true);

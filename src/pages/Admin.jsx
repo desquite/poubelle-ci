@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { collection, onSnapshot, doc, updateDoc } from "firebase/firestore";
 import { db } from "../firebase/config";
+import { useEstBureau, largeur, grilleCartes } from "../utils/ecran";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faTrash, faLocationDot, faTruck, faHouse, faBox, faChartBar,
@@ -25,6 +26,7 @@ const STATUS = {
 };
 
 export default function Admin({ onglet }) {
+  const estBureau = useEstBureau();
   const [signalements, setSignalements] = useState([]);
   const [utilisateurs, setUtilisateurs] = useState([]);
   const [filtreStatut, setFiltreStatut] = useState("");
@@ -90,10 +92,10 @@ export default function Admin({ onglet }) {
 
   // ── Dashboard ──
   if (onglet === "dashboard") return (
-    <div style={{ padding: "16px", maxWidth: 440, margin: "0 auto" }}>
+    <div style={{ padding: "16px", maxWidth: largeur(estBureau), margin: "0 auto" }}>
 
       {/* Stats principales */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 16 }}>
+      <div style={{ display: "grid", gridTemplateColumns: estBureau ? "repeat(4, 1fr)" : "1fr 1fr", gap: 10, marginBottom: 16 }}>
         {[
           { label: "Total signalements", value: stats.total, icon: faBox, color: "#0f172a", bg: "linear-gradient(135deg, #f8fafc, #f1f5f9)", border: "#e2e8f0" },
           { label: "Taux de collecte", value: `${stats.tauxCollecte}%`, icon: faChartBar, color: "#16a34a", bg: "linear-gradient(135deg, #f0fdf4, #dcfce7)", border: "#bbf7d0" },
@@ -107,6 +109,12 @@ export default function Admin({ onglet }) {
           </div>
         ))}
       </div>
+
+      <div style={{
+        display: estBureau ? "grid" : "block",
+        gridTemplateColumns: estBureau ? "repeat(auto-fit, minmax(300px, 1fr))" : undefined,
+        gap: estBureau ? 16 : 0, alignItems: "start"
+      }}>
 
       {/* Statuts */}
       <div style={{ background: "white", borderRadius: 16, padding: "16px", marginBottom: 16, boxShadow: "0 2px 12px rgba(0,0,0,0.07)" }}>
@@ -156,12 +164,14 @@ export default function Admin({ onglet }) {
           ))}
         </div>
       )}
+
+      </div>
     </div>
   );
 
   // ── Signalements ──
   if (onglet === "signalements") return (
-    <div style={{ padding: "16px", maxWidth: 440, margin: "0 auto" }}>
+    <div style={{ padding: "16px", maxWidth: largeur(estBureau), margin: "0 auto" }}>
       <div style={{ display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
         <select value={filtreStatut} onChange={e => setFiltreStatut(e.target.value)} style={{ flex: 1, minWidth: 120, padding: "9px 12px", borderRadius: 12, border: "1.5px solid #e2e8f0", fontSize: 12, color: "#0f172a", background: "white", outline: "none", fontWeight: 600 }}>
           <option value="">Tous les statuts</option>
@@ -180,6 +190,7 @@ export default function Admin({ onglet }) {
 
       <div style={{ fontSize: 12, color: "#94a3b8", marginBottom: 12, fontWeight: 600 }}>{signalementsFiltrés.length} signalement{signalementsFiltrés.length > 1 ? "s" : ""}</div>
 
+      <div style={grilleCartes(estBureau, 340)}>
       {signalementsFiltrés.map(s => {
         const st = STATUS[s.status] || STATUS["disponible"];
         return (
@@ -209,12 +220,13 @@ export default function Admin({ onglet }) {
           </div>
         );
       })}
+      </div>
     </div>
   );
 
   // ── Utilisateurs ──
   if (onglet === "utilisateurs") return (
-    <div style={{ padding: "16px", maxWidth: 440, margin: "0 auto" }}>
+    <div style={{ padding: "16px", maxWidth: largeur(estBureau), margin: "0 auto" }}>
       <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
         <input value={recherche} onChange={e => setRecherche(e.target.value)} placeholder="Rechercher par nom ou téléphone..." style={{ flex: 1, padding: "9px 12px", borderRadius: 12, border: "1.5px solid #e2e8f0", fontSize: 12, outline: "none", color: "#0f172a" }} />
         <select value={filtreRole} onChange={e => setFiltreRole(e.target.value)} style={{ padding: "9px 12px", borderRadius: 12, border: "1.5px solid #e2e8f0", fontSize: 12, color: "#0f172a", background: "white", outline: "none", fontWeight: 600 }}>
@@ -226,6 +238,7 @@ export default function Admin({ onglet }) {
 
       <div style={{ fontSize: 12, color: "#94a3b8", marginBottom: 12, fontWeight: 600 }}>{utilisateursFiltres.length} utilisateur{utilisateursFiltres.length > 1 ? "s" : ""}</div>
 
+      <div style={grilleCartes(estBureau, 340)}>
       {utilisateursFiltres.map(u => (
         <div key={u.id} style={{ background: "white", borderRadius: 16, padding: "14px 16px", marginBottom: 10, boxShadow: "0 2px 10px rgba(0,0,0,0.07)", opacity: u.bloque ? 0.6 : 1 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
@@ -259,6 +272,7 @@ export default function Admin({ onglet }) {
           </div>
         </div>
       ))}
+      </div>
     </div>
   );
 

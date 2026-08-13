@@ -3,9 +3,13 @@
 // la vie privée des ménages. Le GPS précis est réservé aux collecteurs connectés.
 
 import { useEffect, useRef } from "react";
-import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
+import { MapContainer, Marker, Popup, useMap } from "react-leaflet";
 import { ABIDJAN_CENTER, COMMUNES_COORDS } from "../quartiers";
 import { iconPoubelle, iconPoubelleUrgente } from "./mapIcons";
+import { FondCarte, BoutonFond } from "./FondCarte";
+import { useFondCarte, ZOOM_MAX } from "../utils/fondCarte";
+import MarqueursBornes from "./MarqueursBornes";
+import { useBornes } from "../utils/bornes";
 import { formatFCFA } from "../utils/format";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faLocationDot, faClock, faUserPlus, faTrash, faCoins } from "@fortawesome/free-solid-svg-icons";
@@ -89,6 +93,11 @@ function Cadrer({ commune, points }) {
 }
 
 export default function CartePublique({ signalements, commune, onInscription }) {
+  const [fond, setFond] = useFondCarte();
+  const { bornes } = useBornes();
+
+  const bornesVisibles = commune ? bornes.filter((b) => b.commune === commune) : bornes;
+
   const points = signalements
     .filter(s => s.lat && s.lng)
     .map(s => ({ ...s, ...positionApproximative(s) }));
@@ -96,14 +105,12 @@ export default function CartePublique({ signalements, commune, onInscription }) 
   return (
     <div style={{ marginBottom: 12 }}>
       <div style={{ position: "relative", zIndex: 0, borderRadius: 16, overflow: "hidden", boxShadow: "0 2px 12px rgba(0,0,0,0.1)" }}>
-        <MapContainer center={[ABIDJAN_CENTER.lat, ABIDJAN_CENTER.lng]} zoom={11} maxZoom={21}
+        <MapContainer center={[ABIDJAN_CENTER.lat, ABIDJAN_CENTER.lng]} zoom={11} maxZoom={ZOOM_MAX}
           style={{ height: 420, width: "100%" }}>
-          <TileLayer
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-            maxZoom={21} maxNativeZoom={19}
-          />
+          <FondCarte vue={fond} />
           <Cadrer commune={commune} points={points} />
+
+          <MarqueursBornes bornes={bornesVisibles} />
 
           {points.map(s => (
             <Marker key={s.id} position={[s.aLat, s.aLng]} icon={s.urgent ? iconPoubelleUrgente : iconPoubelle}>
@@ -141,10 +148,34 @@ export default function CartePublique({ signalements, commune, onInscription }) 
             </Marker>
           ))}
         </MapContainer>
+
+        <BoutonFond vue={fond} onChange={setFond} />
       </div>
 
+      {bornesVisibles.length > 0 && (
+        <div style={{
+          display: "flex", justifyContent: "center", flexWrap: "wrap", gap: 14,
+          marginTop: 10, fontSize: 10.5, color: "#475569", fontWeight: 600
+        }}>
+          <span style={{ color: "#94a3b8" }}>Bornes :</span>
+          {[
+            { c: "#16a34a", l: "disponible" },
+            { c: "#d97706", l: "bientôt pleine" },
+            { c: "#dc2626", l: "pleine" },
+          ].map(x => (
+            <span key={x.l} style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
+              <span style={{
+                width: 11, height: 11, borderRadius: "50%",
+                border: `3px solid ${x.c}`, background: "white", display: "inline-block"
+              }} />
+              {x.l}
+            </span>
+          ))}
+        </div>
+      )}
+
       <div style={{ fontSize: 10, color: "#94a3b8", textAlign: "center", marginTop: 8 }}>
-        Les positions affichées sont approximatives. Créez un compte collecteur pour voir les positions exactes.
+        Les positions des signalements sont approximatives. Créez un compte collecteur pour voir les positions exactes.
       </div>
     </div>
   );

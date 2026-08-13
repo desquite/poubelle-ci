@@ -10,6 +10,7 @@ import Admin from "./pages/Admin";
 import CartePublique from "./components/CartePublique";
 import CarteSignalement from "./components/CarteSignalement";
 import Logo from "./components/Logo";
+import { useEstBureau, grilleCartes, LARGEUR_BUREAU } from "./utils/ecran";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faTrash, faClock, faMap, faTriangleExclamation, faXmark,
@@ -27,6 +28,7 @@ function SignalementsPublics({ onInscription }) {
   const [filtreCommune, setFiltreCommune] = useState("");
   const [filtreUrgent, setFiltreUrgent] = useState(false);
   const [vue, setVue] = useState("liste");
+  const estBureau = useEstBureau();
 
   useEffect(() => {
     const q = query(collection(db, "signalements"), where("status", "==", "disponible"));
@@ -127,9 +129,11 @@ function SignalementsPublics({ onInscription }) {
         </div>
       )}
 
-      {vue === "liste" && filtres.map(s => (
-        <CarteSignalement key={s.id} s={s} />
-      ))}
+      {vue === "liste" && (
+        <div style={grilleCartes(estBureau)}>
+          {filtres.map(s => <CarteSignalement key={s.id} s={s} />)}
+        </div>
+      )}
 
       {/* CTA collecteur */}
       <div style={{
@@ -153,6 +157,7 @@ function SignalementsPublics({ onInscription }) {
 }
 
 export default function App() {
+  const estBureau = useEstBureau();
   const [mode, setMode] = useState("dashboard");
   const [ecran, setEcran] = useState("accueil");
   const [utilisateur, setUtilisateur] = useState(null);
@@ -181,7 +186,11 @@ export default function App() {
       try {
         if (user) {
           const snap = await getDoc(doc(db, "utilisateurs", user.uid));
-          if (snap.exists()) {
+          // Un compte bloqué après sa connexion garde sa session : on la coupe
+          // à la réouverture de l'app.
+          if (snap.exists() && snap.data().bloque) {
+            await auth.signOut();
+          } else if (snap.exists()) {
             const userData = { uid: user.uid, ...snap.data() };
             setUtilisateur(userData);
             setMode(userData.role === "admin" ? "dashboard" : userData.role === "menage" ? "menage" : "carte");
@@ -211,6 +220,15 @@ export default function App() {
     setEcran("accueil");
   };
 
+  // Le gabarit large ne s'applique qu'aux écrans qui en profitent : la page
+  // publique, l'administration, et la carte du collecteur. Les formulaires de
+  // terrain restent en colonne, y compris sur grand écran.
+  const largeurApp = estBureau && (
+    ecran !== "app"
+    || utilisateur?.role === "admin"
+    || (utilisateur?.role === "collecteur" && mode === "carte")
+  ) ? LARGEUR_BUREAU : 440;
+
   const Header = () => (
     <div style={{
       background: "linear-gradient(135deg, #0f2d0f, #1a4d1a)",
@@ -218,7 +236,7 @@ export default function App() {
       position: "sticky", top: 0, zIndex: 100,
       boxShadow: "0 2px 20px rgba(0,0,0,0.25)"
     }}>
-      <div style={{ maxWidth: 440, margin: "0 auto" }}>
+      <div style={{ maxWidth: largeurApp, margin: "0 auto" }}>
         {showInstall && (
           <div style={{
             background: "#a3e635", padding: "10px 16px",
@@ -389,7 +407,7 @@ export default function App() {
       </div>
 
       {/* Signalements */}
-      <div style={{ maxWidth: 440, margin: "0 auto", marginTop: -20 }}>
+      <div style={{ maxWidth: largeurApp, margin: "0 auto", marginTop: -20 }}>
         <div style={{
           background: "#f8fafc", borderRadius: "20px 20px 0 0",
           padding: "20px 0 0", minHeight: 200
@@ -437,7 +455,7 @@ export default function App() {
   return (
     <div style={{ minHeight: "100vh", background: "#f8fafc", fontFamily: "sans-serif" }}>
       <Header />
-      <div style={{ maxWidth: 440, margin: "0 auto", paddingBottom: 40 }}>
+      <div style={{ maxWidth: largeurApp, margin: "0 auto", paddingBottom: 40 }}>
         {utilisateur?.role === "admin" ? (
           <Admin onglet={mode} />
         ) : utilisateur?.role === "menage" ? (

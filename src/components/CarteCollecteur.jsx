@@ -2,16 +2,21 @@
 // et l'ajout en corbeille (brouillon) depuis les popups.
 
 import { useState, useEffect } from "react";
-import { MapContainer, TileLayer, Marker, Popup, Circle, useMap } from "react-leaflet";
+import { MapContainer, Marker, Popup, Circle, useMap } from "react-leaflet";
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "../firebase/config";
 import { COMMUNES, COMMUNES_COORDS, ABIDJAN_CENTER } from "../quartiers";
 import { distanceKm, formatDistance } from "../utils/geo";
 import { formatFCFA } from "../utils/format";
 import { iconPoubelle, iconPoubelleUrgente, iconPoubelleCorbeille, iconCamion } from "./mapIcons";
+import { FondCarte, BoutonFond } from "./FondCarte";
+import { useFondCarte, ZOOM_MAX } from "../utils/fondCarte";
+import MarqueursBornes from "./MarqueursBornes";
+import { useBornes, etatBorne } from "../utils/bornes";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-  faLocationDot, faPlus, faXmark, faBasketShopping, faLocationCrosshairs, faTrash, faClock, faCoins
+  faLocationDot, faPlus, faXmark, faBasketShopping, faLocationCrosshairs, faTrash, faClock, faCoins,
+  faTriangleExclamation
 } from "@fortawesome/free-solid-svg-icons";
 
 const timeAgo = (timestamp) => {
@@ -64,6 +69,8 @@ export default function CarteCollecteur({ signalements, corbeilleIds, onAjouter,
   const [maPosition, setMaPosition] = useState(null);
   const [gpsErreur, setGpsErreur] = useState(() => !("geolocation" in navigator));
   const [commune, setCommune] = useState("");
+  const [fond, setFond] = useFondCarte();
+  const { bornes } = useBornes();
   const [rayon, setRayon] = useState(() => {
     const v = parseFloat(localStorage.getItem("rayonKm"));
     return v >= 0.5 && v <= 10 ? v : 1;
@@ -97,6 +104,14 @@ export default function CarteCollecteur({ signalements, corbeilleIds, onAjouter,
   const centre = commune ? COMMUNES_COORDS[commune] : (maPosition || ABIDJAN_CENTER);
   const avecGps = eclaterPositions(signalements.filter(s => s.lat && s.lng));
   const nbDansRayon = avecGps.filter(s => distanceKm(centre.lat, centre.lng, s.lat, s.lng) <= rayon).length;
+
+  // Bornes de la zone regardée. Elles servent aussi de repères, donc on les
+  // montre plus large que le rayon de collecte.
+  const bornesAffichees = commune
+    ? bornes.filter(b => b.commune === commune)
+    : bornes.filter(b => b.lat != null && distanceKm(centre.lat, centre.lng, b.lat, b.lng) <= Math.max(rayon * 2, 5));
+
+  const bornesAVider = bornesAffichees.filter(b => ["pleine", "alerte"].includes(etatBorne(b)));
 
   const nbParCommune = {};
   signalements.forEach(s => { if (s.commune) nbParCommune[s.commune] = (nbParCommune[s.commune] || 0) + 1; });
@@ -145,22 +160,32 @@ export default function CarteCollecteur({ signalements, corbeilleIds, onAjouter,
             Position GPS indisponible — choisissez une commune ou activez le GPS.
           </div>
         )}
+
+        {bornesAVider.length > 0 && (
+          <div style={{
+            marginTop: 10, padding: "8px 12px", borderRadius: 10,
+            background: "#fffbeb", border: "1px solid #fde68a",
+            fontSize: 11.5, color: "#92400e", fontWeight: 700
+          }}>
+            <FontAwesomeIcon icon={faTriangleExclamation} style={{ marginRight: 6 }} />
+            {bornesAVider.length} borne{bornesAVider.length > 1 ? "s" : ""} à vider dans cette zone
+          </div>
+        )}
       </div>
 
       {/* Carte */}
       <div style={{ position: "relative", zIndex: 0, borderRadius: 16, overflow: "hidden", boxShadow: "0 2px 12px rgba(0,0,0,0.1)" }}>
-        <MapContainer center={[centre.lat, centre.lng]} zoom={14} maxZoom={21}
+        <MapContainer center={[centre.lat, centre.lng]} zoom={14} maxZoom={ZOOM_MAX}
           style={{ height: "calc(100dvh - 330px)", minHeight: 380, width: "100%" }}>
-          <TileLayer
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-            maxZoom={21} maxNativeZoom={19}
-          />
+          <FondCarte vue={fond} />
           <Recentrer centre={centre} />
 
           {/* Rayon d'action */}
           <Circle center={[centre.lat, centre.lng]} radius={rayon * 1000}
             pathOptions={{ color: "#16a34a", weight: 1.5, fillColor: "#16a34a", fillOpacity: 0.07 }} />
+
+          {/* Bornes connectées de la zone affichée */}
+          <MarqueursBornes bornes={bornesAffichees} maPosition={maPosition} />
 
           {/* Moi (le collecteur) */}
           {maPosition && (
@@ -234,6 +259,8 @@ export default function CarteCollecteur({ signalements, corbeilleIds, onAjouter,
             );
           })}
         </MapContainer>
+
+        <BoutonFond vue={fond} onChange={setFond} />
 
         {/* Bouton flottant corbeille */}
         <button onClick={onVoirCorbeille} style={{

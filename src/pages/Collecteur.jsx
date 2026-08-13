@@ -4,6 +4,7 @@ import { db } from "../firebase/config";
 import CarteCollecteur from "../components/CarteCollecteur";
 import CarteSignalement from "../components/CarteSignalement";
 import { distanceKm } from "../utils/geo";
+import { useEstBureau, largeur } from "../utils/ecran";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faLocationDot, faClock, faMap, faXmark,
@@ -11,6 +12,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 
 export default function Collecteur({ utilisateur, mode, onChangeMode }) {
+  const estBureau = useEstBureau();
   const [disponibles, setDisponibles] = useState([]);
   const [mesCollectes, setMesCollectes] = useState([]);
   const [corbeille, setCorbeille] = useState([]);
@@ -136,7 +138,8 @@ export default function Collecteur({ utilisateur, mode, onChangeMode }) {
   );
 
   return (
-    <div style={{ padding: "16px 16px", maxWidth: 440, margin: "0 auto" }}>
+    // Seule la carte profite du grand écran : les listes restent en colonne.
+    <div style={{ padding: "16px 16px", maxWidth: mode === "carte" ? largeur(estBureau) : 440, margin: "0 auto" }}>
 
       {/* Stats (hors vue carte) */}
       {mode !== "carte" && (
