@@ -11,9 +11,18 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    function role() {
+      return get(/databases/$(database)/documents/utilisateurs/$(request.auth.uid)).data.role;
+    }
+
     function estAdmin() {
-      return connecte()
-        && get(/databases/$(database)/documents/utilisateurs/$(request.auth.uid)).data.role == "admin";
+      return connecte() && role() == "admin";
+    }
+
+    // Agent municipal : traite les signalements d'insalubrité, y compris ceux
+    // qui visent une personne (transmis à la police municipale).
+    function estMairie() {
+      return connecte() && role() == "mairie";
     }
 
     // Signalements : lecture publique (page d'accueil), écritures contrôlées
@@ -88,7 +97,7 @@ service cloud.firestore {
     match /incidents/{id} {
       allow read: if resource.data.visibilite == "publique"
         || (connecte() && resource.data.uid == request.auth.uid)
-        || estAdmin();
+        || estMairie() || estAdmin();
 
       allow create: if connecte()
         && request.resource.data.uid == request.auth.uid
@@ -105,8 +114,9 @@ service cloud.firestore {
       allow delete: if connecte()
         && (estAdmin() || (resource.data.uid == request.auth.uid && resource.data.statut == "signale"));
 
-      // Le traitement (affectation, résolution) reste réservé à l'admin.
-      allow update: if estAdmin();
+      // Le traitement — affectation à un service, avancement du statut,
+      // preuve de résolution — est réservé à la mairie et à l'admin.
+      allow update: if estMairie() || estAdmin();
     }
 
     // Codes OTP : réservés au serveur (admin SDK, qui ignore les règles)

@@ -8,6 +8,7 @@ import Inscription from "./pages/Inscription";
 import Connexion from "./pages/Connexion";
 import Admin from "./pages/Admin";
 import SignalerIncident from "./pages/SignalerIncident";
+import Mairie from "./pages/Mairie";
 import CartePublique from "./components/CartePublique";
 import CarteSignalement from "./components/CarteSignalement";
 import Logo from "./components/Logo";
@@ -21,6 +22,13 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 
 const nomAffiche = (nom) => nom?.trim().split(/\s+/).pop() || nom || "";
+
+// Onglet ouvert à la connexion, selon le rôle.
+const ongletParDefaut = (role) => ({
+  admin: "dashboard",
+  mairie: "traitement",
+  menage: "menage",
+}[role] || "carte");
 
 const auth = getAuth();
 
@@ -194,7 +202,7 @@ export default function App() {
           } else if (snap.exists()) {
             const userData = { uid: user.uid, ...snap.data() };
             setUtilisateur(userData);
-            setMode(userData.role === "admin" ? "dashboard" : userData.role === "menage" ? "menage" : "carte");
+            setMode(ongletParDefaut(userData.role));
             setEcran("app");
           }
         }
@@ -316,6 +324,10 @@ export default function App() {
               { key: "dashboard", icon: faChartBar, label: "Dashboard", desc: "Vue globale" },
               { key: "signalements", icon: faBox, label: "Signalements", desc: "Tous" },
               { key: "utilisateurs", icon: faUsers, label: "Utilisateurs", desc: "Gérer" },
+            ] : utilisateur?.role === "mairie" ? [
+              { key: "traitement", icon: faClipboardList, label: "Traitement", desc: "À traiter" },
+              { key: "carte-mairie", icon: faMap, label: "Carte", desc: "Vue terrain" },
+              { key: "bilan", icon: faChartBar, label: "Bilan", desc: "Délais" },
             ] : utilisateur?.role === "menage" ? [
               { key: "menage", icon: faHouse, label: "Ma poubelle", desc: "Signaler" },
               { key: "insalubrite", icon: faTriangleExclamation, label: "Insalubrité", desc: "Caniveau, tas" },
@@ -426,7 +438,7 @@ export default function App() {
       <Header />
       <Inscription onInscrit={(user) => {
         setUtilisateur(user);
-        setMode(user.role === "menage" ? "menage" : "carte");
+        setMode(ongletParDefaut(user.role));
         setEcran("app");
       }} />
       <div style={{ textAlign: "center", padding: 16 }}>
@@ -443,7 +455,7 @@ export default function App() {
       <Header />
       <Connexion onConnecte={(user) => {
         setUtilisateur(user);
-        setMode(user.role === "menage" ? "menage" : "carte");
+        setMode(ongletParDefaut(user.role));
         setEcran("app");
       }} />
       <div style={{ textAlign: "center", padding: 16 }}>
@@ -461,6 +473,8 @@ export default function App() {
       <div style={{ maxWidth: largeurApp, margin: "0 auto", paddingBottom: 40 }}>
         {mode === "insalubrite" ? (
           <SignalerIncident utilisateur={utilisateur} onFini={() => setEcran("accueil")} />
+        ) : utilisateur?.role === "mairie" ? (
+          <Mairie utilisateur={utilisateur} onglet={mode} />
         ) : utilisateur?.role === "admin" ? (
           <Admin onglet={mode} />
         ) : utilisateur?.role === "menage" ? (

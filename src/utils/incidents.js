@@ -86,6 +86,53 @@ export function ancienneteJours(incident) {
   return Math.floor((Date.now() - s * 1000) / 86400000);
 }
 
+// Services municipaux auxquels un signalement peut être affecté.
+export const SERVICES = [
+  "Service assainissement",
+  "Service voirie",
+  "Prestataire de collecte",
+  "Service hygiène et santé",
+  "Police municipale",
+];
+
+// Enchaînement autorisé des statuts : on n'avance que d'un cran à la fois, et
+// on ne revient en arrière que vers « signalé ».
+export const SUITE_STATUT = {
+  signale: ["affecte"],
+  affecte: ["en_cours", "signale"],
+  en_cours: ["resolu", "signale"],
+  resolu: [],
+};
+
+// Délai entre le signalement et sa résolution, en jours.
+export function delaiResolutionJours(incident) {
+  const debut = incident?.createdAt?.seconds;
+  const fin = incident?.resoluAt?.seconds;
+  if (!debut || !fin) return null;
+  return Math.max(0, (fin - debut) / 86400);
+}
+
+/**
+ * Délai moyen de résolution par commune — l'indicateur qui met la pression.
+ * Les communes se comparent entre elles ; on ne dénonce personne.
+ */
+export function delaiMoyenParCommune(incidents) {
+  const parCommune = {};
+  incidents.forEach((i) => {
+    const d = delaiResolutionJours(i);
+    if (d === null || !i.commune) return;
+    (parCommune[i.commune] = parCommune[i.commune] || []).push(d);
+  });
+
+  return Object.entries(parCommune)
+    .map(([commune, delais]) => ({
+      commune,
+      nb: delais.length,
+      moyenneJours: delais.reduce((a, b) => a + b, 0) / delais.length,
+    }))
+    .sort((a, b) => a.moyenneJours - b.moyenneJours);
+}
+
 export function urgence(incident) {
   if (incident?.statut === "resolu") return "resolu";
   const j = ancienneteJours(incident);
@@ -129,6 +176,34 @@ export function useIncidents({ inclureResolus = false } = {}) {
   }, [inclureResolus]);
 
   return { incidents, chargees };
+}
+
+/**
+ * Tous les signalements, y compris ceux qui visent une personne.
+ * Réservé à la mairie et à l'admin : les règles Firestore refusent cette
+ * lecture à quiconque d'autre.
+ */
+export function useTousIncidents() {
+  const [incidents, setIncidents] = useState([]);
+  const [chargees, setChargees] = useState(false);
+  const [erreur, setErreur] = useState(null);
+
+  useEffect(() => {
+    const unsub = onSnapshot(
+      collection(db, "incidents"),
+      (snap) => {
+        const data = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+        data.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+        setIncidents(data);
+        setChargees(true);
+        setErreur(null);
+      },
+      (e) => { setErreur(e.code || e.message); setChargees(true); }
+    );
+    return () => unsub();
+  }, []);
+
+  return { incidents, chargees, erreur };
 }
 
 /** Mes propres signalements, y compris ceux qui ne sont pas publics. */
