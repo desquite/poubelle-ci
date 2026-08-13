@@ -10,6 +10,8 @@ import { FondCarte, BoutonFond } from "./FondCarte";
 import { useFondCarte, ZOOM_MAX } from "../utils/fondCarte";
 import MarqueursBornes from "./MarqueursBornes";
 import { useBornes } from "../utils/bornes";
+import MarqueursIncidents from "./MarqueursIncidents";
+import { useIncidents } from "../utils/incidents";
 import { formatFCFA } from "../utils/format";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faLocationDot, faClock, faUserPlus, faTrash, faCoins } from "@fortawesome/free-solid-svg-icons";
@@ -95,8 +97,10 @@ function Cadrer({ commune, points }) {
 export default function CartePublique({ signalements, commune, onInscription }) {
   const [fond, setFond] = useFondCarte();
   const { bornes } = useBornes();
+  const { incidents } = useIncidents();
 
   const bornesVisibles = commune ? bornes.filter((b) => b.commune === commune) : bornes;
+  const incidentsVisibles = commune ? incidents.filter((i) => i.commune === commune) : incidents;
 
   const points = signalements
     .filter(s => s.lat && s.lng)
@@ -111,6 +115,7 @@ export default function CartePublique({ signalements, commune, onInscription }) 
           <Cadrer commune={commune} points={points} />
 
           <MarqueursBornes bornes={bornesVisibles} />
+          <MarqueursIncidents incidents={incidentsVisibles} />
 
           {points.map(s => (
             <Marker key={s.id} position={[s.aLat, s.aLng]} icon={s.urgent ? iconPoubelleUrgente : iconPoubelle}>

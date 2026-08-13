@@ -37,6 +37,20 @@ export const iconBorne = (pct = 0, couleur = "#16a34a", size = 44) => {
   });
 };
 
+// Incident citoyen : goutte inversée, couleur de la catégorie. La forme la
+// distingue des poubelles (disques) et des bornes (anneaux).
+export const iconIncident = (couleur = "#dc2626", urgent = false, size = 32) =>
+  L.divIcon({
+    className: "",
+    html: `<div style="width:${size}px;height:${size}px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:${couleur};border:2.5px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;">
+      <span style="transform:rotate(45deg);color:white;font-size:${Math.round(size * 0.44)}px;font-weight:900;font-family:sans-serif;line-height:1">!</span>
+      ${urgent ? `<span style="position:absolute;inset:-4px;border-radius:50% 50% 50% 0;border:2px solid ${couleur};opacity:.45"></span>` : ""}
+    </div>`,
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size],
+    popupAnchor: [0, -size],
+  });
+
 export const iconPoubelle = svgIcon(TRASH_PATH, "0 0 448 512", "linear-gradient(135deg, #16a34a, #15803d)");
 export const iconPoubelleUrgente = svgIcon(TRASH_PATH, "0 0 448 512", "linear-gradient(135deg, #ef4444, #dc2626)");
 export const iconPoubelleCorbeille = svgIcon(TRASH_PATH, "0 0 448 512", "linear-gradient(135deg, #16a34a, #15803d)", 34, true);

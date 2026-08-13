@@ -7,6 +7,7 @@ import Collecteur from "./pages/Collecteur";
 import Inscription from "./pages/Inscription";
 import Connexion from "./pages/Connexion";
 import Admin from "./pages/Admin";
+import SignalerIncident from "./pages/SignalerIncident";
 import CartePublique from "./components/CartePublique";
 import CarteSignalement from "./components/CarteSignalement";
 import Logo from "./components/Logo";
@@ -316,11 +317,13 @@ export default function App() {
               { key: "signalements", icon: faBox, label: "Signalements", desc: "Tous" },
               { key: "utilisateurs", icon: faUsers, label: "Utilisateurs", desc: "Gérer" },
             ] : utilisateur?.role === "menage" ? [
-              { key: "menage", icon: faHouse, label: "Signaler", desc: "Nouveau" },
+              { key: "menage", icon: faHouse, label: "Ma poubelle", desc: "Signaler" },
+              { key: "insalubrite", icon: faTriangleExclamation, label: "Insalubrité", desc: "Caniveau, tas" },
               { key: "mescollectes", icon: faClipboardList, label: "Historique", desc: "Mes signalements" },
             ] : [
               { key: "carte", icon: faMap, label: "Carte", desc: "Autour de moi" },
               { key: "corbeille", icon: faBasketShopping, label: "Corbeille", desc: "Brouillons" },
+              { key: "insalubrite", icon: faTriangleExclamation, label: "Insalubrité", desc: "Signaler" },
               { key: "mescollectes", icon: faTruck, label: "Collectes", desc: "Historique" },
             ]).map(tab => (
               <button key={tab.key} onClick={() => setMode(tab.key)} style={{
@@ -456,7 +459,9 @@ export default function App() {
     <div style={{ minHeight: "100vh", background: "#f8fafc", fontFamily: "sans-serif" }}>
       <Header />
       <div style={{ maxWidth: largeurApp, margin: "0 auto", paddingBottom: 40 }}>
-        {utilisateur?.role === "admin" ? (
+        {mode === "insalubrite" ? (
+          <SignalerIncident utilisateur={utilisateur} onFini={() => setEcran("accueil")} />
+        ) : utilisateur?.role === "admin" ? (
           <Admin onglet={mode} />
         ) : utilisateur?.role === "menage" ? (
           <Menage utilisateur={utilisateur} mode={mode} />

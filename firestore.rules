@@ -80,6 +80,35 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // Signalements citoyens d'insalubrité.
+    // Le problème est public, la personne ne l'est jamais : seuls les incidents
+    // marqués « publique » sont lisibles par tous. Les signalements qui visent
+    // un individu (visibilite == "restreinte") ne sont accessibles qu'à leur
+    // auteur et à l'admin.
+    match /incidents/{id} {
+      allow read: if resource.data.visibilite == "publique"
+        || (connecte() && resource.data.uid == request.auth.uid)
+        || estAdmin();
+
+      allow create: if connecte()
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.statut == "signale"
+        && request.resource.data.visibilite in ["publique", "restreinte"];
+
+      // Un citoyen ne peut que confirmer (« c'est toujours là ») : il ajoute sa
+      // confirmation, sans rien pouvoir changer d'autre.
+      allow update: if connecte()
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(["confirmations", "confirmePar", "derniereConfirmationAt"]);
+
+      // L'auteur peut retirer son signalement tant qu'il n'est pas pris en charge.
+      allow delete: if connecte()
+        && (estAdmin() || (resource.data.uid == request.auth.uid && resource.data.statut == "signale"));
+
+      // Le traitement (affectation, résolution) reste réservé à l'admin.
+      allow update: if estAdmin();
+    }
+
     // Codes OTP : réservés au serveur (admin SDK, qui ignore les règles)
     match /otps/{tel} {
       allow read, write: if false;
