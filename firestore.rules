@@ -55,6 +55,31 @@ service cloud.firestore {
       allow write: if connecte() && request.auth.uid == uid;
     }
 
+    // Bornes connectées : lecture publique (la carte les affiche à tous),
+    // écriture réservée au serveur — c'est /api/borne, authentifié par la clé
+    // de chaque borne, qui met à jour poids et remplissage.
+    match /bornes/{code} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // Dépôts, vidages et compteurs journaliers : écrits par /api/borne via
+    // l'admin SDK, qui ignore ces règles. Aucun accès depuis le navigateur.
+    // Seul l'admin peut les relire, pour le suivi et l'audit des fraudes.
+    match /depots/{id} {
+      allow read: if estAdmin();
+      allow write: if false;
+    }
+
+    match /vidages/{id} {
+      allow read: if estAdmin();
+      allow write: if false;
+    }
+
+    match /compteurs/{id} {
+      allow read, write: if false;
+    }
+
     // Codes OTP : réservés au serveur (admin SDK, qui ignore les règles)
     match /otps/{tel} {
       allow read, write: if false;
