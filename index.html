@@ -6,7 +6,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#2e7d32" />
     <meta name="description" content="Signalement de collecte de déchets en Côte d'Ivoire" />
-    <link rel="manifest" href="/manifest.json" />
+    <!-- Le manifest et le service worker sont générés et déclarés par vite-plugin-pwa
+         (voir vite.config.js) : ne pas en ajouter ici, le navigateur ne lit que le
+         premier <link rel="manifest"> et ignorerait celui du plugin. -->
 
     <!-- Installation PWA sur iPhone/iPad (iOS ignore le manifest pour l'icône) -->
     <link rel="apple-touch-icon" href="/icon-192.png" />
@@ -15,13 +17,6 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Poubelle-CI" />
     <title>Poubelle-CI</title>
-    <script>
-      if ("serviceWorker" in navigator) {
-        window.addEventListener("load", () => {
-          navigator.serviceWorker.register("/sw.js");
-        });
-      }
-    </script>
   </head>
   <body>
     <div id="root"></div>
