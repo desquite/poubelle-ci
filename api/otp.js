@@ -9,6 +9,8 @@ import { db, adminAuth, envoyerWhatsApp } from "./_firebase.js";
 const hashCode = (code) =>
   crypto.createHash("sha256").update(`${code}:${process.env.FIREBASE_PROJECT_ID}`).digest("hex");
 
+const COMPTE_BLOQUE = "Ce compte a été suspendu. Contactez l'administrateur.";
+
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method Not Allowed" });
@@ -26,6 +28,9 @@ export default async function handler(req, res) {
         const u = await db.collection("utilisateurs").doc(tel).get();
         if (!u.exists) {
           return res.status(404).json({ error: "Numéro introuvable. Veuillez vous inscrire d'abord." });
+        }
+        if (u.data().bloque) {
+          return res.status(403).json({ error: COMPTE_BLOQUE });
         }
       }
 
@@ -64,6 +69,14 @@ export default async function handler(req, res) {
       }
 
       await ref.delete();
+
+      // Second verrou : un compte peut avoir été bloqué après l'envoi du code.
+      // (Le doc n'existe pas encore lors d'une inscription : cas normal.)
+      const u = await db.collection("utilisateurs").doc(tel).get();
+      if (u.exists && u.data().bloque) {
+        return res.status(403).json({ error: COMPTE_BLOQUE });
+      }
+
       const token = await adminAuth.createCustomToken(tel);
       return res.status(200).json({ success: true, token });
     }

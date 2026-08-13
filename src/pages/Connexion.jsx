@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { doc, getDoc } from "firebase/firestore";
-import { signInWithCustomToken } from "firebase/auth";
+import { signInWithCustomToken, signOut } from "firebase/auth";
 import { db, auth } from "../firebase/config";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCheck, faArrowLeft, faComment, faLock, faShieldHalved } from "@fortawesome/free-solid-svg-icons";
@@ -61,6 +61,11 @@ export default function Connexion({ onConnecte }) {
       const { token } = await apiOtp({ action: "verify", telephone: uid, code });
       await signInWithCustomToken(auth, token);
       const snap = await getDoc(doc(db, "utilisateurs", uid));
+      // Le serveur refuse déjà les comptes bloqués ; garde-fou côté client.
+      if (snap.data()?.bloque) {
+        await signOut(auth);
+        throw new Error("Ce compte a été suspendu. Contactez l'administrateur.");
+      }
       onConnecte({ uid, ...snap.data() });
     } catch (e) {
       setErreur(e.message);
